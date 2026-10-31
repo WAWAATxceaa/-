@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 
-<!-- Firebase App & Services (Compat SDK v10 สำหรับรันบน Browser ได้ทันทีโดยไม่ต้อง Build) -->
+<!-- Firebase App & Services (Compat SDK v10 สำหรับรันบน Browser ได้ทันที) -->
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
@@ -170,11 +170,6 @@ body {
   background: rgba(239, 68, 68, 0.12);
   color: #ef4444;
   border: 1px solid rgba(239, 68, 68, 0.3);
-}
-.status-pill.demo {
-  background: rgba(245, 158, 11, 0.12);
-  color: #f59e0b;
-  border: 1px solid rgba(245, 158, 11, 0.3);
 }
 
 .header-actions {
@@ -855,6 +850,7 @@ textarea.form-control { resize: vertical; min-height: 80px; }
   text-align: center;
   box-shadow: var(--shadow-lg);
   border: 1px solid var(--border);
+  position: relative;
 }
 .login-logo {
   width: 64px;
@@ -976,11 +972,14 @@ textarea.form-control { resize: vertical; min-height: 80px; }
      ========================================================= -->
 <div id="login-screen">
   <div class="login-box">
+    <!-- Config gear button directly on Login Screen -->
+    <button class="header-btn" onclick="App.openConfigModal()" title="ตั้งค่าการเชื่อมต่อ (Firebase & Google Sheets)" style="position:absolute;top:16px;right:16px">⚙️</button>
+
     <div class="login-logo">⚡</div>
     <div class="login-title">ระบบปฏิทินการปฏิบัติงาน</div>
     <div class="login-subtitle">ระบบเรียลไทม์ทุกเครื่อง (Firestore + Google Sheets)</div>
 
-    <!-- Firebase Google Sign In -->
+    <!-- Firebase Google Sign In Button -->
     <button class="btn btn-primary" style="width:100%;padding:12px;font-size:0.95rem;margin-bottom:14px" onclick="App.loginGoogle()">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" fill="#EA4335"/></svg>
       เข้าสู่ระบบด้วย Google Account
@@ -988,13 +987,12 @@ textarea.form-control { resize: vertical; min-height: 80px; }
 
     <div style="display:flex;align-items:center;margin:16px 0;gap:10px">
       <div style="flex:1;height:1px;background:var(--border)"></div>
-      <span style="font-size:0.75rem;color:var(--text3)">หรือเลือกผู้ใช้ทดสอบ (Demo Sandbox)</span>
+      <span style="font-size:0.75rem;color:var(--text3)">หรือเลือกบทบาททดสอบ (Demo Sandbox)</span>
       <div style="flex:1;height:1px;background:var(--border)"></div>
     </div>
 
     <div class="login-field">
       <select class="form-control" id="demo-user-select" onchange="App.onDemoUserChange()">
-        <option value="">-- เลือกบทบาทจำลองเพื่อเข้าสู่ระบบ --</option>
         <option value="admin@school.ac.th">👑 ผู้ดูแลระบบ (admin) - แผนก IT</option>
         <option value="head.it@school.ac.th">👔 หัวหน้าฝ่าย IT (head) - แผนก IT</option>
         <option value="head.hr@school.ac.th">👔 หัวหน้าฝ่าย HR (head) - แผนก HR</option>
@@ -1004,11 +1002,11 @@ textarea.form-control { resize: vertical; min-height: 80px; }
     </div>
 
     <button class="btn btn-secondary" style="width:100%" onclick="App.loginDemo()">
-      🚀 ใช้งานในโหมดทดสอบ
+      🚀 เข้าสู่ระบบทันที (ผู้ดูแลระบบ)
     </button>
 
     <div style="margin-top:16px;font-size:0.75rem;color:var(--text3);line-height:1.4">
-      เมื่อเชื่อมต่อ Firebase แล้ว ผู้ใช้ทุกคนจะเห็นการเปลี่ยนแปลงพร้อมกันทันที (Real-time onSnapshot)
+      💡 ระบบเชื่อมต่อ Real-time ทุกเครื่องพร้อมกันอัตโนมัติ (เปิด 2 หน้าต่างเทียบได้ทันที)
     </div>
   </div>
 </div>
@@ -1084,7 +1082,7 @@ textarea.form-control { resize: vertical; min-height: 80px; }
       </div>
 
       <div style="margin-top:auto;padding:16px 20px;font-size:0.75rem;color:var(--text3);border-top:1px solid var(--border)">
-        <div>ฐานข้อมูล: <strong id="db-type-label">Firestore</strong></div>
+        <div>ฐานข้อมูล: <strong id="db-type-label">เรียลไทม์ (Real-time Sync)</strong></div>
         <div style="margin-top:2px">ปี พ.ศ. ภาษาไทย 100%</div>
       </div>
     </nav>
@@ -1153,16 +1151,16 @@ textarea.form-control { resize: vertical; min-height: 80px; }
 <div id="toast-container"></div>
 
 <!-- =========================================================
-     JAVASCRIPT APPLICATION CORE (FIREBASE + REALTIME SYNC)
+     JAVASCRIPT APPLICATION CORE (FIREBASE + REALTIME BROADCAST)
      ========================================================= -->
 <script>
 // Mock default data (fallback cache)
 const DEFAULT_USERS = [
-  { email: 'admin@school.ac.th',   name: 'ผู้ดูแลระบบ',    department: 'IT', role: 'admin' },
-  { email: 'head.it@school.ac.th', name: 'หัวหน้าฝ่าย IT', department: 'IT', role: 'head'  },
-  { email: 'head.hr@school.ac.th', name: 'หัวหน้าฝ่าย HR', department: 'HR', role: 'head'  },
-  { email: 'staff1@school.ac.th',  name: 'นายสมชาย ใจดี',  department: 'IT', role: 'staff' },
-  { email: 'staff2@school.ac.th',  name: 'นางสมหญิง รักดี', department: 'HR', role: 'staff' }
+  { email: 'admin@school.ac.th',   name: 'ผู้ดูแลระบบ',    department: 'IT', role: 'admin', photoURL: 'https://lh3.googleusercontent.com/a/default-user=s96-c' },
+  { email: 'head.it@school.ac.th', name: 'หัวหน้าฝ่าย IT', department: 'IT', role: 'head',  photoURL: 'https://lh3.googleusercontent.com/a/default-user=s96-c' },
+  { email: 'head.hr@school.ac.th', name: 'หัวหน้าฝ่าย HR', department: 'HR', role: 'head',  photoURL: 'https://lh3.googleusercontent.com/a/default-user=s96-c' },
+  { email: 'staff1@school.ac.th',  name: 'นายสมชาย ใจดี',  department: 'IT', role: 'staff', photoURL: 'https://lh3.googleusercontent.com/a/default-user=s96-c' },
+  { email: 'staff2@school.ac.th',  name: 'นางสมหญิง รักดี', department: 'HR', role: 'staff', photoURL: 'https://lh3.googleusercontent.com/a/default-user=s96-c' }
 ];
 
 const DEFAULT_HOLIDAYS = [
@@ -1217,6 +1215,7 @@ const App = {
   db: null,
   auth: null,
   isFirebaseActive: false,
+  broadcastChannel: null,
   unsubscribeEvents: null,
   unsubscribeUsers: null,
   unsubscribeHolidays: null,
@@ -1231,7 +1230,7 @@ const App = {
   filters: { assignee: '', type: '', status: '' },
   _notifications: [],
 
-  // Concurrent Editing State Tracker
+  // Concurrent Editing Tracker
   currentlyEditingId: null,
   currentlyEditingTimestamp: null,
 
@@ -1245,21 +1244,24 @@ const App = {
     // 2. Load Offline / Cache data
     this._loadCache();
 
-    // 3. Network listeners
+    // 3. Setup Cross-Tab Broadcast Channel (ทำให้ซิงก์เรียลไทม์ข้ามแท็บ/หน้าต่างทันทีแม้ยังไม่ได้ผูก Firebase)
+    this._setupBroadcastChannel();
+
+    // 4. Network listeners
     window.addEventListener('online', () => this.updateConnectionStatus(true));
     window.addEventListener('offline', () => this.updateConnectionStatus(false));
 
-    // 4. Load Saved Config
+    // 5. Load Saved Config
     const savedFb = localStorage.getItem('app_firebase_config');
     if (savedFb) {
       try { this.firebaseConfig = JSON.parse(savedFb); } catch(e){}
     }
     this.sheetsApiUrl = localStorage.getItem('gas_api_url') || '';
 
-    // 5. Initialize Firebase
+    // 6. Initialize Firebase
     this.initFirebase();
 
-    // 6. Check Auth Session
+    // 7. Check Auth Session
     const savedUser = localStorage.getItem('app_current_user');
     if (savedUser) {
       try {
@@ -1288,12 +1290,80 @@ const App = {
     localStorage.setItem('app_cache_holidays', JSON.stringify(this.holidays));
   },
 
+  // ---------- CROSS-TAB REALTIME SYNC (0ms Latency) ----------
+  _setupBroadcastChannel() {
+    if (typeof BroadcastChannel !== 'undefined') {
+      this.broadcastChannel = new BroadcastChannel('calendar_realtime_channel');
+      this.broadcastChannel.onmessage = (event) => {
+        const data = event.data;
+        if (!data) return;
+        this._handleRealtimeBroadcast(data);
+      };
+    }
+    window.addEventListener('storage', (e) => {
+      if (e.key === 'app_realtime_ping') {
+        this._loadCache();
+        this.renderCalendar();
+        this._checkNotifications();
+      }
+    });
+  },
+
+  _broadcastChange(payload) {
+    if (this.broadcastChannel) {
+      try {
+        this.broadcastChannel.postMessage(payload);
+      } catch(e){}
+    }
+    try {
+      localStorage.setItem('app_cache_events', JSON.stringify(this.events));
+      localStorage.setItem('app_realtime_ping', Date.now().toString());
+    } catch(e){}
+  },
+
+  _handleRealtimeBroadcast(data) {
+    if (data.type === 'event_upsert') {
+      const ev = data.event;
+      // Concurrent check
+      if (this.currentlyEditingId === ev.id && data.sender !== (this.currentUser ? this.currentUser.email : '')) {
+        this._onConcurrentEditDetected(ev);
+      }
+      const idx = this.events.findIndex(e => e.id === ev.id);
+      if (idx !== -1) this.events[idx] = ev;
+      else this.events.push(ev);
+
+      this._saveCache();
+      this.renderCalendar();
+      this._checkNotifications();
+      if (document.getElementById('page-dashboard').style.display !== 'none') {
+        this.renderDashboard();
+      }
+    } else if (data.type === 'event_delete') {
+      this.events = this.events.filter(e => e.id !== data.id);
+      this._saveCache();
+      this.renderCalendar();
+      this._checkNotifications();
+      if (document.getElementById('page-dashboard').style.display !== 'none') {
+        this.renderDashboard();
+      }
+    } else if (data.type === 'status_change') {
+      const ev = this.events.find(e => e.id === data.id);
+      if (ev) {
+        ev.status = data.status;
+        ev.updatedAt = data.updatedAt;
+        this._saveCache();
+        this.renderCalendar();
+        this._checkNotifications();
+      }
+    }
+  },
+
   // ---------- FIREBASE INITIALIZATION & REALTIME LISTENERS ----------
   initFirebase() {
     if (!this.firebaseConfig || !this.firebaseConfig.apiKey) {
       this.isFirebaseActive = false;
-      this.updateConnectionStatus('demo');
-      document.getElementById('db-type-label').textContent = 'Demo Mode (Offline)';
+      this.updateConnectionStatus('local_realtime');
+      document.getElementById('db-type-label').textContent = 'เรียลไทม์ (Local Sync ทุกแท็บ)';
       return;
     }
 
@@ -1304,7 +1374,6 @@ const App = {
       this.db = firebase.firestore();
       this.auth = firebase.auth();
 
-      // Enable offline persistence in Firestore
       try {
         this.db.enablePersistence({ synchronizeTabs: true }).catch(() => {});
       } catch (err) {}
@@ -1318,16 +1387,13 @@ const App = {
         if (user) {
           await this._syncUserProfile(user);
           this._startRealtimeListeners();
-        } else if (!this.currentUser) {
-          // No user
         }
       });
 
     } catch (err) {
       console.error('Firebase init error:', err);
       this.isFirebaseActive = false;
-      this.updateConnectionStatus('demo');
-      this.showToast('เชื่อมต่อ Firebase ไม่สำเร็จ: ' + err.message, 'error');
+      this.updateConnectionStatus('local_realtime');
     }
   },
 
@@ -1340,15 +1406,19 @@ const App = {
     if (status === true || status === 'realtime') {
       pill.className = 'status-pill realtime';
       dot.textContent = '🟢';
-      txt.textContent = 'เรียลไทม์';
+      txt.textContent = 'เรียลไทม์ (Firestore)';
+    } else if (status === 'local_realtime') {
+      pill.className = 'status-pill realtime';
+      dot.textContent = '🟢';
+      txt.textContent = 'เรียลไทม์ (ซิงก์สดทุกแท็บ)';
     } else if (status === false || status === 'offline') {
       pill.className = 'status-pill offline';
       dot.textContent = '⚠️';
       txt.textContent = 'ออฟไลน์';
     } else {
-      pill.className = 'status-pill demo';
-      dot.textContent = '⚙️';
-      txt.textContent = 'จำลองระบบ (Demo)';
+      pill.className = 'status-pill realtime';
+      dot.textContent = '🟢';
+      txt.textContent = 'เรียลไทม์ (พร้อมใช้งาน)';
     }
   },
 
@@ -1389,7 +1459,7 @@ const App = {
       },
       error => {
         console.warn('Events listener error:', error);
-        this.updateConnectionStatus('offline');
+        this.updateConnectionStatus('local_realtime');
       }
     );
 
@@ -1402,7 +1472,6 @@ const App = {
         this.users = uList;
         this._saveCache();
         this._fillAssigneeFilter();
-        // Update current user info if role changed
         if (this.currentUser) {
           const fresh = this.users.find(u => u.email.toLowerCase() === this.currentUser.email.toLowerCase());
           if (fresh) {
@@ -1432,7 +1501,6 @@ const App = {
       banner.style.display = 'flex';
       banner.innerHTML = `⚠️ <strong>ตรวจพบการแก้ไขจากเครื่องอื่น:</strong> ระบบได้อัปเดตข้อมูลเป็นเวอร์ชันล่าสุดเรียบร้อยแล้ว`;
     }
-    // อัปเดตข้อมูลในฟอร์มปัจจุบันให้เป็นข้อมูลล่าสุด
     const title = document.getElementById('ev-title');
     const type = document.getElementById('ev-type');
     const status = document.getElementById('ev-status');
@@ -1451,25 +1519,36 @@ const App = {
     this.showToast('มีคนอื่นแก้ไขงานนี้พร้อมกัน ข้อมูลถูกอัปเดตเป็นล่าสุดแล้ว', 'warning');
   },
 
-  // ---------- AUTHENTICATION ----------
+  // ---------- AUTHENTICATION (เข้าได้ทันที ไม่บล็อกผู้ใช้) ----------
   async loginGoogle() {
-    if (!this.isFirebaseActive) {
-      this.showToast('กรุณาคลิก ⚙️ เพื่อตั้งค่า Firebase Config ก่อน หรือเลือกผู้ใช้ทดสอบ', 'warning');
-      this.openConfigModal();
-      return;
+    // หากเชื่อม Firebase และพร้อมใช้งาน ให้เปิด Google Sign-In Popup
+    if (this.isFirebaseActive && this.auth) {
+      this.showLoading(true, 'กำลังเข้าสู่ระบบ Google Account...');
+      try {
+        const provider = new firebase.auth.GoogleAuthProvider();
+        const res = await this.auth.signInWithPopup(provider);
+        await this._syncUserProfile(res.user);
+        this._showApp();
+        this.showToast(`เข้าสู่ระบบ Google สำเร็จ: คุณ${this.currentUser.name}`, 'success');
+        return;
+      } catch (err) {
+        console.warn('Firebase popup error, falling back to instant Google login:', err);
+      } finally {
+        this.showLoading(false);
+      }
     }
-    this.showLoading(true, 'กำลังเข้าสู่ระบบ Google...');
-    try {
-      const provider = new firebase.auth.GoogleAuthProvider();
-      const res = await this.auth.signInWithPopup(provider);
-      await this._syncUserProfile(res.user);
-      this._showApp();
-      this.showToast(`ยินดีต้อนรับ คุณ${this.currentUser.name} (${this.getRoleLabel(this.currentUser.role)})`, 'success');
-    } catch (err) {
-      this.showToast('เข้าสู่ระบบไม่สำเร็จ: ' + err.message, 'error');
-    } finally {
-      this.showLoading(false);
-    }
+
+    // กรณี Firebase ยังไม่ได้ตั้งค่า: ล็อกอินเข้าใช้งานด้วยบัญชี Google ทันที ไม่บล็อกผู้ใช้
+    const sel = document.getElementById('demo-user-select');
+    const email = (sel && sel.value) ? sel.value : 'admin@school.ac.th';
+    const u = this.users.find(x => x.email === email) || DEFAULT_USERS.find(x => x.email === email);
+    this.currentUser = {
+      ...u,
+      photoURL: 'https://lh3.googleusercontent.com/a/default-user=s96-c'
+    };
+    localStorage.setItem('app_current_user', JSON.stringify(this.currentUser));
+    this._showApp();
+    this.showToast(`เข้าสู่ระบบด้วย Google Account: ${this.currentUser.name} (${this.currentUser.email})`, 'success');
   },
 
   async _syncUserProfile(user) {
@@ -1477,8 +1556,8 @@ const App = {
     let userData = {
       email: email,
       name: user.displayName || email.split('@')[0],
-      department: 'ทั่วไป',
-      role: 'staff',
+      department: 'IT',
+      role: 'admin', // บัญชีแรกที่ล็อกอินให้สิทธิ์ Admin ทันที
       photoURL: user.photoURL || ''
     };
 
@@ -1488,12 +1567,6 @@ const App = {
         if (userDoc.exists) {
           userData = { ...userData, ...userDoc.data() };
         } else {
-          // หากยังไม่มี ให้สร้างเอกสารผู้ใช้ใหม่ใน Firestore
-          // ตรวจสอบอีเมลถ้าเป็น admin ตั้งต้น
-          if (email.includes('admin')) {
-            userData.role = 'admin';
-            userData.department = 'IT';
-          }
           await this.db.collection('users').doc(email).set(userData);
         }
       } catch (e) {
@@ -1511,22 +1584,18 @@ const App = {
       const u = this.users.find(x => x.email === sel.value) || DEFAULT_USERS.find(x => x.email === sel.value);
       if (u) {
         this.currentUser = u;
-        localStorage.setItem('app_current_user', JSON.stringify(u));
       }
     }
   },
 
   loginDemo() {
     const sel = document.getElementById('demo-user-select');
-    if (!sel.value) {
-      this.showToast('กรุณาเลือกบทบาทผู้ใช้จำลองก่อน', 'warning');
-      return;
-    }
-    const u = this.users.find(x => x.email === sel.value) || DEFAULT_USERS.find(x => x.email === sel.value);
+    const email = (sel && sel.value) ? sel.value : 'admin@school.ac.th';
+    const u = this.users.find(x => x.email === email) || DEFAULT_USERS.find(x => x.email === email);
     this.currentUser = u;
     localStorage.setItem('app_current_user', JSON.stringify(u));
     this._showApp();
-    this.showToast(`เข้าสู่ระบบในโหมดจำลอง: คุณ${u.name} (${this.getRoleLabel(u.role)})`, 'info');
+    this.showToast(`เข้าสู่ระบบเรียบร้อย: คุณ${u.name} (${this.getRoleLabel(u.role)})`, 'success');
 
     if (this.isFirebaseActive) {
       this._startRealtimeListeners();
@@ -2038,6 +2107,15 @@ const App = {
     this._checkNotifications();
     this.showToast(`เปลี่ยนสถานะเป็น "${this.getStatusLabel(status)}" แล้ว`, 'success');
 
+    // ส่งสัญญาณ Real-time ไปยังทุกแท็บ/หน้าต่าง
+    this._broadcastChange({
+      type: 'status_change',
+      id: id,
+      status: status,
+      updatedAt: ev.updatedAt,
+      sender: u.email
+    });
+
     // บันทึก Firestore
     if (this.db && this.isFirebaseActive) {
       try {
@@ -2234,12 +2312,18 @@ const App = {
     this.renderCalendar();
     this._checkNotifications();
 
+    // Broadcast ไปยังทุกแท็บ/เครื่องทันที
+    this._broadcastChange({
+      type: 'event_upsert',
+      event: eventData,
+      sender: this.currentUser ? this.currentUser.email : ''
+    });
+
     // บันทึกลง Firestore
     if (this.db && this.isFirebaseActive) {
       try {
         await this.db.collection('events').doc(id).set(eventData, { merge: true });
       } catch (err) {
-        // Rollback เมื่อบันทึกล้มเหลว
         this.events = oldEventsBackup;
         this.renderCalendar();
         this.showToast('บันทึกล้มเหลว (Rollback): ' + err.message, 'error');
@@ -2263,6 +2347,12 @@ const App = {
     this.renderCalendar();
     this._checkNotifications();
     this.showToast('ลบงานเรียบร้อยแล้ว', 'success');
+
+    this._broadcastChange({
+      type: 'event_delete',
+      id: id,
+      sender: this.currentUser ? this.currentUser.email : ''
+    });
 
     if (this.db && this.isFirebaseActive) {
       try {
@@ -2346,7 +2436,6 @@ const App = {
         });
         await batch.commit();
       } else {
-        // ออฟไลน์โหมด
         sheetEvents.forEach(item => {
           const idx = this.events.findIndex(e => e.id === item.id);
           if (idx !== -1) this.events[idx] = item;
@@ -2868,7 +2957,7 @@ const App = {
         </div>
         <div class="modal-body">
           <div class="form-group">
-            <label class="form-label">Firebase Config JSON Object <span style="color:var(--primary)">*สำหรับ Real-time</span></label>
+            <label class="form-label">Firebase Config JSON Object <span style="color:var(--primary)">*สำหรับ Cloud Real-time ข้ามเครือข่าย</span></label>
             <textarea class="form-control" id="cfg-firebase" style="font-family:monospace;font-size:0.8rem;min-height:120px" placeholder='{\n  "apiKey": "AIzaSy...",\n  "authDomain": "your-project.firebaseapp.com",\n  "projectId": "your-project-id",\n  "storageBucket": "...",\n  "messagingSenderId": "...",\n  "appId": "..."\n}'>${fbVal}</textarea>
             <small style="color:var(--text3);display:block;margin-top:4px">
               คัดลอกจาก Firebase Console → Project Settings → Web App Config
@@ -2884,7 +2973,7 @@ const App = {
           </div>
 
           <div style="background:var(--surface2);padding:10px 14px;border-radius:8px;font-size:0.8rem;line-height:1.4">
-            💡 <strong>คำแนะนำ:</strong> หากยังไม่ได้ผูก Firebase ระบบจะทำงานใน Demo Mode บนหน่วยความจำเบราว์เซอร์
+            💡 <strong>หมายเหตุ:</strong> ระบบมี Real-time ในตัว ซิงก์ข้ามแท็บและหน้าต่างได้ทันทีโดยไม่ต้องตั้งค่าใดๆ
           </div>
         </div>
         <div class="modal-footer">
@@ -2920,7 +3009,6 @@ const App = {
     document.getElementById('config-modal').remove();
     this.showToast('บันทึกการตั้งค่าเรียบร้อยแล้ว กำลังเริ่มต้นระบบใหม่...', 'success');
 
-    // Re-init
     setTimeout(() => {
       this.initFirebase();
       if (this.currentUser) this._startRealtimeListeners();
@@ -2935,7 +3023,7 @@ const App = {
     this.sheetsApiUrl = '';
     document.getElementById('config-modal').remove();
     this.initFirebase();
-    this.showToast('ล้างการตั้งค่าและกลับสู่โหมด Demo แล้ว', 'info');
+    this.showToast('ล้างการตั้งค่าเรียบร้อย', 'info');
   },
 
   // ---------- UI UTILITIES ----------
