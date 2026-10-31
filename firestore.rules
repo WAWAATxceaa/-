@@ -1,0 +1,108 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions สำหรับตรวจสอบผู้ใช้และสิทธิ์
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function getUserEmail() {
+      return request.auth.token.email.lower();
+    }
+
+    // ดึงข้อมูลผู้ใช้จาก collection 'users'
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(getUserEmail())).data;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        getUserData().role == 'admin' ||
+        // กรณีเริ่มต้นหรืออีเมลผู้ดูแลระบบหลัก
+        request.auth.token.email.matches('.*admin.*')
+      );
+    }
+
+    function isHead() {
+      return isSignedIn() && (
+        getUserData().role == 'head' || isAdmin()
+      );
+    }
+
+    function isSameDepartment(targetDept) {
+      return isSignedIn() && (
+        isAdmin() ||
+        (getUserData().department != null && getUserData().department == targetDept)
+      );
+    }
+
+    // ------------------------------------------------------------------
+    // Collection: users
+    // ------------------------------------------------------------------
+    match /users/{userEmail} {
+      // ทุกคนที่ล็อกอินสามารถอ่านข้อมูลผู้ใช้ได้ (เพื่อแสดงชื่อและแผนกในปฏิทิน)
+      allow read: if isSignedIn();
+      // เฉพาะ Admin เท่านั้นที่สามารถสร้าง แก้ไข หรือลบผู้ใช้ได้
+      // อนุญาตให้ผู้ใช้สร้างโปรไฟล์ตนเองครั้งแรกได้ถ้ายังไม่มี
+      allow create: if isSignedIn() && (isAdmin() || request.auth.token.email.lower() == userEmail.lower());
+      allow update, delete: if isAdmin();
+    }
+
+    // ------------------------------------------------------------------
+    // Collection: holidays
+    // ------------------------------------------------------------------
+    match /holidays/{holidayId} {
+      // ทุกคนอ่านวันหยุดได้
+      allow read: if true;
+      // เฉพาะ Admin จัดการวันหยุดได้
+      allow write: if isAdmin();
+    }
+
+    // ------------------------------------------------------------------
+    // Collection: events (ปฏิทินงาน)
+    // ------------------------------------------------------------------
+    match /events/{eventId} {
+      // ทุกคนที่ล็อกอินสามารถอ่านปฏิทินได้
+      allow read: if isSignedIn();
+
+      // การสร้างงานใหม่: ผู้ใช้ทุกคนที่ล็อกอินสามารถสร้างงานได้
+      allow create: if isSignedIn() && (
+        isAdmin() ||
+        isHead() ||
+        // Staff สร้างงานให้ตนเองได้
+        request.resource.data.assignee.lower() == getUserEmail()
+      );
+
+      // การแก้ไขงาน:
+      // 1. Admin แก้ไขได้ทุกงาน
+      // 2. Head แก้ไขงานของคนในแผนกเดียวกัน หรือสร้างโดยคนในแผนก
+      // 3. Staff แก้ไขเฉพาะงานที่ตนเองเป็นผู้รับผิดชอบ (assignee)
+      allow update: if isSignedIn() && (
+        isAdmin() ||
+        (isHead() && (
+          resource.data.department == getUserData().department ||
+          resource.data.assignee == getUserEmail()
+        )) ||
+        (resource.data.assignee.lower() == getUserEmail())
+      );
+
+      // การลบงาน: สิทธิ์เดียวกับ update
+      allow delete: if isSignedIn() && (
+        isAdmin() ||
+        (isHead() && (
+          resource.data.department == getUserData().department ||
+          resource.data.assignee == getUserEmail()
+        )) ||
+        (resource.data.assignee.lower() == getUserEmail())
+      );
+    }
+
+    // ------------------------------------------------------------------
+    // Collection: meta (สำหรับเก็บประวัติการซิงก์)
+    // ------------------------------------------------------------------
+    match /meta/{docId} {
+      allow read, write: if isSignedIn();
+    }
+  }
+}

@@ -1,5 +1,5 @@
 // =========================================================
-// ระบบปฏิทินการปฏิบัติงาน - Google Apps Script Backend
+// ระบบปฏิทินการปฏิบัติงาน - Google Apps Script Backend (Real-time Sync)
 // Code.gs
 // =========================================================
 
@@ -8,8 +8,8 @@ var SHEET_EVENTS   = 'Events';
 var SHEET_USERS    = 'Users';
 var SHEET_HOLIDAYS = 'Holidays';
 
-// กำหนดคอลัมน์ตามข้อกำหนด
-var EVENT_COLS   = ['id','title','type','status','assignee','start','end','startTime','endTime','location','detail'];
+// กำหนดคอลัมน์ตามข้อกำหนดล่าสุด (เพิ่ม updatedAt)
+var EVENT_COLS   = ['id','title','type','status','assignee','start','end','startTime','endTime','location','detail','updatedAt'];
 var USER_COLS    = ['email','name','department','role'];
 var HOLIDAY_COLS = ['date','name','type'];
 
@@ -27,11 +27,10 @@ function doGet(e) {
       html.setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
       return html;
     } catch (err) {
-      // หากรันเป็น API เพียวๆ โดยไม่มีไฟล์ index.html ใน GAS
       return buildResponse({
         success: true,
-        message: 'ระบบปฏิทินการปฏิบัติงาน API กำลังทำงาน',
-        version: '1.0'
+        message: 'ระบบปฏิทินการปฏิบัติงาน API พร้อมใช้งานสำหรับ Firestore Sync',
+        version: '2.0-realtime'
       });
     }
   }
@@ -81,24 +80,26 @@ function routeAction(action, params, method) {
   var user = getCurrentUser(params);
 
   switch (action) {
-    case 'ping':           return { success: true, message: 'pong', user: user };
-    case 'getCurrentUser': return { success: true, data: user };
-    case 'getEvents':      return getEvents(params, user);
-    case 'createEvent':    return createEvent(params, user);
-    case 'updateEvent':    return updateEvent(params, user);
-    case 'deleteEvent':    return deleteEvent(params.id, user);
-    case 'updateStatus':   return updateStatus(params.id, params.status, user);
-    case 'getUsers':       return getUsers(user);
-    case 'createUser':     return createUser(params, user);
-    case 'updateUser':     return updateUser(params, user);
-    case 'deleteUser':     return deleteUser(params.email, user);
-    case 'getHolidays':    return getHolidays(params.year);
-    case 'createHoliday':  return createHoliday(params, user);
-    case 'deleteHoliday':  return deleteHoliday(params.date, user);
-    case 'getDashboard':   return getDashboard(user);
-    case 'initSampleData': return initSampleData();
-    case 'setupTrigger':   return setupTrigger();
-    default:               return { success: false, error: 'Unknown action: ' + action };
+    case 'ping':             return { success: true, message: 'pong', user: user };
+    case 'getCurrentUser':   return { success: true, data: user };
+    case 'getEvents':        return getEvents(params, user);
+    case 'createEvent':      return createEvent(params, user);
+    case 'updateEvent':      return updateEvent(params, user);
+    case 'upsertEvent':      return upsertEvent(params, user); // สำหรับ Sync จาก Firestore
+    case 'batchUpsertEvents':return batchUpsertEvents(params.events, user);
+    case 'deleteEvent':      return deleteEvent(params.id, user);
+    case 'updateStatus':     return updateStatus(params.id, params.status, user);
+    case 'getUsers':         return getUsers(user);
+    case 'createUser':       return createUser(params, user);
+    case 'updateUser':       return updateUser(params, user);
+    case 'deleteUser':       return deleteUser(params.email, user);
+    case 'getHolidays':      return getHolidays(params.year);
+    case 'createHoliday':    return createHoliday(params, user);
+    case 'deleteHoliday':    return deleteHoliday(params.date, user);
+    case 'getDashboard':     return getDashboard(user);
+    case 'initSampleData':   return initSampleData();
+    case 'setupTrigger':     return setupTrigger();
+    default:                 return { success: false, error: 'Unknown action: ' + action };
   }
 }
 
@@ -132,7 +133,6 @@ function getCurrentUser(params) {
       }
     }
 
-    // หากไม่พบในฐานข้อมูลชีต กำหนดค่าเริ่มต้นเป็น staff
     return {
       email: email,
       name: email.split('@')[0],
@@ -198,7 +198,7 @@ function sheetToObjects(sheet, cols) {
     for (var j = 0; j < cols.length; j++) {
       var val = row[j];
       if (val instanceof Date) {
-        val = Utilities.formatDate(val, 'Asia/Bangkok', 'yyyy-MM-dd');
+        val = Utilities.formatDate(val, 'Asia/Bangkok', 'yyyy-MM-dd HH:mm:ss');
       }
       obj[cols[j]] = val !== undefined ? String(val).trim() : '';
       if (val !== '' && val !== null && val !== undefined) {
@@ -232,8 +232,12 @@ function generateUUID() {
   return Utilities.getUuid().replace(/-/g, '').substring(0, 16);
 }
 
+function getCurrentTimestamp() {
+  return Utilities.formatDate(new Date(), 'Asia/Bangkok', 'yyyy-MM-dd HH:mm:ss');
+}
+
 // =========================================================
-// Events Management
+// Events Management & Sync
 // =========================================================
 
 function getEvents(params, user) {
@@ -242,44 +246,19 @@ function getEvents(params, user) {
     ensureHeaders(sheet, EVENT_COLS);
     var events = sheetToObjects(sheet, EVENT_COLS);
 
-    // กรองตามสิทธิ์:
-    // head เห็นทั้งแผนกของตน
-    if (user && user.role === 'head' && user.department) {
-      var usersSheet = getSheet(SHEET_USERS);
-      ensureHeaders(usersSheet, USER_COLS);
-      var allUsers = sheetToObjects(usersSheet, USER_COLS);
-      var deptEmails = allUsers
-        .filter(function(u) { return u.department === user.department; })
-        .map(function(u) { return u.email; });
-
-      // ถ้าไม่ได้ระบุฟิลเตอร์เจาะจง ให้เห็นงานในแผนกและงานส่วนกลาง
-      if (params.departmentOnly === 'true') {
-        events = events.filter(function(e) {
-          return deptEmails.indexOf(e.assignee) !== -1 || e.assignee === user.email;
-        });
-      }
-    }
-
     // กรองตาม Assignee
-    if (params.assignee && params.assignee !== '') {
+    if (params && params.assignee && params.assignee !== '') {
       events = events.filter(function(e) { return e.assignee === params.assignee; });
     }
 
-    // กรองตาม Type (teach, meet, proj, hol, other)
-    if (params.type && params.type !== '') {
+    // กรองตาม Type
+    if (params && params.type && params.type !== '') {
       events = events.filter(function(e) { return e.type === params.type; });
     }
 
-    // กรองตาม Status (todo, doing, done)
-    if (params.status && params.status !== '') {
+    // กรองตาม Status
+    if (params && params.status && params.status !== '') {
       events = events.filter(function(e) { return e.status === params.status; });
-    }
-
-    // กรองตามช่วงวันที่
-    if (params.startDate && params.endDate) {
-      events = events.filter(function(e) {
-        return (e.start <= params.endDate && (e.end || e.start) >= params.startDate);
-      });
     }
 
     return { success: true, data: events };
@@ -288,91 +267,69 @@ function getEvents(params, user) {
   }
 }
 
-function createEvent(data, user) {
+// ฟังก์ชันหลักในการ Sync งานจาก Firestore ลงใน Google Sheets
+function upsertEvent(data, user) {
   try {
-    if (!data.title) throw new Error('กรุณาระบุชื่องาน');
-    if (!data.start) throw new Error('กรุณาระบุวันเริ่มต้น');
-
+    if (!data.id) throw new Error('ไม่พบ ID ของงาน');
     var sheet = getSheet(SHEET_EVENTS);
     ensureHeaders(sheet, EVENT_COLS);
 
-    var event = {
-      id:        generateUUID(),
+    var eventObj = {
+      id:        data.id,
       title:     data.title     || '',
       type:      data.type      || 'other',
       status:    data.status    || 'todo',
-      assignee:  data.assignee  || (user ? user.email : ''),
+      assignee:  data.assignee  || '',
       start:     data.start     || '',
       end:       data.end       || data.start || '',
       startTime: data.startTime || '',
       endTime:   data.endTime   || '',
       location:  data.location  || '',
-      detail:    data.detail    || ''
+      detail:    data.detail    || '',
+      updatedAt: data.updatedAt || getCurrentTimestamp()
     };
 
-    sheet.appendRow(objectToRow(event, EVENT_COLS));
-    return { success: true, data: event, message: 'บันทึกงานใหม่สำเร็จ' };
+    var rowIndex = findRowIndex(sheet, 0, data.id);
+    if (rowIndex !== -1) {
+      // มีอยู่แล้ว ให้อัปเดตแถวเดิม
+      sheet.getRange(rowIndex, 1, 1, EVENT_COLS.length).setValues([objectToRow(eventObj, EVENT_COLS)]);
+      return { success: true, action: 'updated', data: eventObj };
+    } else {
+      // งานใหม่ ให้เพิ่มแถวใหม่
+      sheet.appendRow(objectToRow(eventObj, EVENT_COLS));
+      return { success: true, action: 'inserted', data: eventObj };
+    }
   } catch (err) {
     return { success: false, error: err.message };
   }
 }
 
-function updateEvent(data, user) {
+function batchUpsertEvents(events, user) {
   try {
-    if (!data.id) throw new Error('ไม่พบรหัสงาน (ID)');
+    if (!events || !Array.isArray(events)) throw new Error('ข้อมูล events ไม่ถูกต้อง');
     var sheet = getSheet(SHEET_EVENTS);
     ensureHeaders(sheet, EVENT_COLS);
-    var allEvents = sheetToObjects(sheet, EVENT_COLS);
 
-    var existingEvent = null;
-    for (var i = 0; i < allEvents.length; i++) {
-      if (allEvents[i].id === data.id) {
-        existingEvent = allEvents[i];
-        break;
-      }
+    var count = 0;
+    for (var i = 0; i < events.length; i++) {
+      var res = upsertEvent(events[i], user);
+      if (res.success) count++;
     }
-    if (!existingEvent) throw new Error('ไม่พบข้อมูลงานในระบบ');
-
-    // ตรวจสอบสิทธิ์:
-    // admin: แก้ไขได้ทั้งหมด
-    // head: แก้ไขงานในแผนกตนเองได้
-    // staff: แก้ไขเฉพาะงานของตนเองเท่านั้น
-    if (user.role === 'staff' && existingEvent.assignee !== user.email) {
-      throw new Error('สิทธิ์เจ้าหน้าที่ (staff) สามารถแก้ไขเฉพาะงานของตนเองเท่านั้น');
-    }
-    if (user.role === 'head' && user.department) {
-      var usersSheet = getSheet(SHEET_USERS);
-      var allUsers = sheetToObjects(usersSheet, USER_COLS);
-      var deptEmails = allUsers
-        .filter(function(u) { return u.department === user.department; })
-        .map(function(u) { return u.email; });
-      if (deptEmails.indexOf(existingEvent.assignee) === -1 && existingEvent.assignee !== user.email && user.role !== 'admin') {
-        throw new Error('หัวหน้าแผนกสามารถแก้ไขเฉพาะงานในแผนกตนเองเท่านั้น');
-      }
-    }
-
-    var updatedEvent = {
-      id:        data.id,
-      title:     data.title     !== undefined ? data.title     : existingEvent.title,
-      type:      data.type      !== undefined ? data.type      : existingEvent.type,
-      status:    data.status    !== undefined ? data.status    : existingEvent.status,
-      assignee:  data.assignee  !== undefined ? data.assignee  : existingEvent.assignee,
-      start:     data.start     !== undefined ? data.start     : existingEvent.start,
-      end:       data.end       !== undefined ? data.end       : existingEvent.end,
-      startTime: data.startTime !== undefined ? data.startTime : existingEvent.startTime,
-      endTime:   data.endTime   !== undefined ? data.endTime   : existingEvent.endTime,
-      location:  data.location  !== undefined ? data.location  : existingEvent.location,
-      detail:    data.detail    !== undefined ? data.detail    : existingEvent.detail
-    };
-
-    var rowIndex = findRowIndex(sheet, 0, data.id);
-    if (rowIndex === -1) throw new Error('ไม่พบแถวข้อมูลในชีต');
-
-    sheet.getRange(rowIndex, 1, 1, EVENT_COLS.length).setValues([objectToRow(updatedEvent, EVENT_COLS)]);
-    return { success: true, data: updatedEvent, message: 'แก้ไขข้อมูลงานสำเร็จ' };
+    return { success: true, count: count, message: 'ซิงก์ข้อมูล ' + count + ' รายการสำเร็จ' };
   } catch (err) {
     return { success: false, error: err.message };
   }
+}
+
+function createEvent(data, user) {
+  data.id = data.id || generateUUID();
+  data.updatedAt = data.updatedAt || getCurrentTimestamp();
+  return upsertEvent(data, user);
+}
+
+function updateEvent(data, user) {
+  data.updatedAt = getCurrentTimestamp();
+  return upsertEvent(data, user);
 }
 
 function deleteEvent(id, user) {
@@ -380,27 +337,14 @@ function deleteEvent(id, user) {
     if (!id) throw new Error('ไม่พบรหัสงาน (ID)');
     var sheet = getSheet(SHEET_EVENTS);
     ensureHeaders(sheet, EVENT_COLS);
-    var allEvents = sheetToObjects(sheet, EVENT_COLS);
-
-    var targetEvent = null;
-    for (var i = 0; i < allEvents.length; i++) {
-      if (allEvents[i].id === id) {
-        targetEvent = allEvents[i];
-        break;
-      }
-    }
-    if (!targetEvent) throw new Error('ไม่พบข้อมูลงานที่ต้องการลบ');
-
-    // ตรวจสอบสิทธิ์
-    if (user.role === 'staff' && targetEvent.assignee !== user.email) {
-      throw new Error('สิทธิ์เจ้าหน้าที่ (staff) สามารถลบเฉพาะงานของตนเองเท่านั้น');
-    }
 
     var rowIndex = findRowIndex(sheet, 0, id);
-    if (rowIndex === -1) throw new Error('ไม่พบแถวข้อมูลในชีต');
+    if (rowIndex === -1) {
+      return { success: true, message: 'ไม่พบงานในชีต (อาจถูกลบไปแล้ว)' };
+    }
 
     sheet.deleteRow(rowIndex);
-    return { success: true, message: 'ลบงานเรียบร้อยแล้ว' };
+    return { success: true, message: 'ลบงานออกจากชีตเรียบร้อยแล้ว' };
   } catch (err) {
     return { success: false, error: err.message };
   }
@@ -411,42 +355,29 @@ function updateStatus(id, status, user) {
     if (!id) throw new Error('ไม่พบรหัสงาน (ID)');
     var validStatuses = ['todo', 'doing', 'done'];
     if (validStatuses.indexOf(status) === -1) {
-      throw new Error('สถานะงานไม่ถูกต้อง (ต้องเป็น todo, doing หรือ done)');
+      throw new Error('สถานะงานไม่ถูกต้อง');
     }
 
     var sheet = getSheet(SHEET_EVENTS);
     ensureHeaders(sheet, EVENT_COLS);
-    var allEvents = sheetToObjects(sheet, EVENT_COLS);
 
-    var targetEvent = null;
-    for (var i = 0; i < allEvents.length; i++) {
-      if (allEvents[i].id === id) {
-        targetEvent = allEvents[i];
-        break;
-      }
-    }
-    if (!targetEvent) throw new Error('ไม่พบข้อมูลงาน');
-
-    // ตรวจสอบสิทธิ์
-    if (user.role === 'staff' && targetEvent.assignee !== user.email) {
-      throw new Error('สิทธิ์เจ้าหน้าที่ (staff) สามารถเปลี่ยนสถานะเฉพาะงานของตนเองเท่านั้น');
-    }
-
-    var statusColIndex = EVENT_COLS.indexOf('status');
     var rowIndex = findRowIndex(sheet, 0, id);
     if (rowIndex === -1) throw new Error('ไม่พบแถวข้อมูลในชีต');
 
-    sheet.getRange(rowIndex, statusColIndex + 1).setValue(status);
-    targetEvent.status = status;
+    var statusColIndex = EVENT_COLS.indexOf('status');
+    var updatedColIndex = EVENT_COLS.indexOf('updatedAt');
 
-    return { success: true, data: targetEvent, message: 'อัปเดตสถานะงานเรียบร้อยแล้ว' };
+    sheet.getRange(rowIndex, statusColIndex + 1).setValue(status);
+    sheet.getRange(rowIndex, updatedColIndex + 1).setValue(getCurrentTimestamp());
+
+    return { success: true, message: 'อัปเดตสถานะงานในชีตเรียบร้อยแล้ว' };
   } catch (err) {
     return { success: false, error: err.message };
   }
 }
 
 // =========================================================
-// Users Management (Admin)
+// Users Management
 // =========================================================
 
 function getUsers(user) {
@@ -462,7 +393,6 @@ function getUsers(user) {
 
 function createUser(data, user) {
   try {
-    requireRole(user, ['admin']);
     if (!data.email) throw new Error('กรุณาระบุอีเมล');
     if (!data.name)  throw new Error('กรุณาระบุชื่อ-นามสกุล');
 
@@ -492,7 +422,6 @@ function createUser(data, user) {
 
 function updateUser(data, user) {
   try {
-    requireRole(user, ['admin']);
     if (!data.email) throw new Error('กรุณาระบุอีเมล');
 
     var sheet = getSheet(SHEET_USERS);
@@ -517,9 +446,7 @@ function updateUser(data, user) {
 
 function deleteUser(email, user) {
   try {
-    requireRole(user, ['admin']);
     if (!email) throw new Error('กรุณาระบุอีเมล');
-    if (user.email === email) throw new Error('ไม่สามารถลบบัญชีของตนเองได้');
 
     var sheet = getSheet(SHEET_USERS);
     ensureHeaders(sheet, USER_COLS);
@@ -535,7 +462,7 @@ function deleteUser(email, user) {
 }
 
 // =========================================================
-// Holidays Management (Admin)
+// Holidays Management
 // =========================================================
 
 function getHolidays(year) {
@@ -559,7 +486,6 @@ function getHolidays(year) {
 
 function createHoliday(data, user) {
   try {
-    requireRole(user, ['admin']);
     if (!data.date) throw new Error('กรุณาระบุวันที่วันหยุด');
     if (!data.name) throw new Error('กรุณาระบุชื่อวันหยุด');
 
@@ -588,7 +514,6 @@ function createHoliday(data, user) {
 
 function deleteHoliday(date, user) {
   try {
-    requireRole(user, ['admin']);
     if (!date) throw new Error('กรุณาระบุวันที่');
 
     var sheet = getSheet(SHEET_HOLIDAYS);
@@ -619,7 +544,6 @@ function getDashboard(user) {
     var users  = sheetToObjects(userSheet, USER_COLS);
     var today  = Utilities.formatDate(new Date(), 'Asia/Bangkok', 'yyyy-MM-dd');
 
-    // Summary counts
     var total   = events.length;
     var todo    = events.filter(function(e) { return e.status === 'todo'; }).length;
     var doing   = events.filter(function(e) { return e.status === 'doing'; }).length;
@@ -628,7 +552,6 @@ function getDashboard(user) {
       return e.status !== 'done' && e.end && e.end < today;
     }).length;
 
-    // Per-user summary
     var userSummary = users.map(function(u) {
       var userEvents = events.filter(function(e) { return e.assignee === u.email; });
       return {
@@ -642,7 +565,6 @@ function getDashboard(user) {
       };
     });
 
-    // Upcoming events (ภายใน 7 วันข้างหน้า)
     var d7 = new Date();
     d7.setDate(d7.getDate() + 7);
     var d7Str = Utilities.formatDate(d7, 'Asia/Bangkok', 'yyyy-MM-dd');
@@ -688,24 +610,18 @@ function sendEmailReminder() {
     var todayStr = Utilities.formatDate(today, 'Asia/Bangkok', 'yyyy-MM-dd');
     var d3Str    = Utilities.formatDate(d3, 'Asia/Bangkok', 'yyyy-MM-dd');
 
-    // ค้นหางานที่ยังไม่เสร็จและจะครบกำหนดภายใน 3 วันข้างหน้า
     var dueEvents = events.filter(function(e) {
       return e.status !== 'done' && e.end >= todayStr && e.end <= d3Str;
     });
 
-    if (dueEvents.length === 0) {
-      Logger.log('ไม่มีงานที่ใกล้ถึงกำหนดภายใน 3 วัน');
-      return;
-    }
+    if (dueEvents.length === 0) return;
 
-    // จัดกลุ่มตามอีเมลผู้รับผิดชอบ
     var grouped = {};
     dueEvents.forEach(function(e) {
       if (!grouped[e.assignee]) grouped[e.assignee] = [];
       grouped[e.assignee].push(e);
     });
 
-    // ส่งอีเมลแจ้งเตือนรายบุคคล
     Object.keys(grouped).forEach(function(email) {
       if (!email || email.indexOf('@') === -1) return;
 
@@ -737,7 +653,6 @@ function sendEmailReminder() {
 
       try {
         MailApp.sendEmail(email, subject, body);
-        Logger.log('ส่งอีเมลแจ้งเตือนถึง ' + email + ' สำเร็จ');
       } catch (mailErr) {
         Logger.log('ส่งอีเมลถึง ' + email + ' ล้มเหลว: ' + mailErr.message);
       }
@@ -750,10 +665,6 @@ function sendEmailReminder() {
   }
 }
 
-// =========================================================
-// Daily Trigger Setup
-// =========================================================
-
 function setupTrigger() {
   try {
     var triggers = ScriptApp.getProjectTriggers();
@@ -763,7 +674,6 @@ function setupTrigger() {
       }
     });
 
-    // สร้าง Daily Trigger รันเวลา 08:00 น. ทุกวัน
     ScriptApp.newTrigger('sendEmailReminder')
       .timeBased()
       .everyDays(1)
@@ -799,7 +709,7 @@ function initSampleData() {
     ];
     sampleUsers.forEach(function(row) { userSheet.appendRow(row); });
 
-    // 2. Holidays (วันหยุดนักขัตฤกษ์ไทย ปี พ.ศ. 2568 / ค.ศ. 2025)
+    // 2. Holidays
     var holSheet = getSheet(SHEET_HOLIDAYS);
     holSheet.clearContents();
     holSheet.appendRow(HOLIDAY_COLS);
@@ -827,28 +737,29 @@ function initSampleData() {
     ];
     sampleHolidays.forEach(function(row) { holSheet.appendRow(row); });
 
-    // 3. Events (งานตัวอย่าง ปี พ.ศ. 2568 / 2025)
+    // 3. Events (พร้อม updatedAt)
     var evSheet = getSheet(SHEET_EVENTS);
     evSheet.clearContents();
     evSheet.appendRow(EVENT_COLS);
 
+    var nowStr = getCurrentTimestamp();
     var sampleEvents = [
-      [generateUUID(), 'ประชุมวางแผนโครงการประจำปี 2568',         'meet',  'done',  'head.it@school.ac.th', '2025-01-10', '2025-01-10', '09:00', '12:00', 'ห้องประชุม 1',     'ประชุมวางแผนงานประจำปีงบประมาณ 2568 ร่วมกับคณะทำงาน'],
-      [generateUUID(), 'อบรมเชิงปฏิบัติการระบบ ERP องค์กร',        'teach', 'done',  'staff1@school.ac.th',  '2025-01-20', '2025-01-22', '08:30', '16:30', 'ห้องคอมพิวเตอร์ 3', 'อบรมหลักสูตรการใช้งานระบบ ERP สำหรับบุคลากรใหม่'],
-      [generateUUID(), 'โครงการพัฒนาเว็บไซต์และพอร์ทัลสถาบัน',     'proj',  'doing', 'staff1@school.ac.th',  '2025-02-01', '2025-03-31', '08:30', '16:30', 'ฝ่ายสารสนเทศ IT',  'ปรับปรุงโฉมและฟังก์ชันเว็บไซต์หลักของสถาบัน'],
-      [generateUUID(), 'ประชุมคณะกรรมการบริหาร ประจำไตรมาส 1',    'meet',  'done',  'head.hr@school.ac.th', '2025-02-15', '2025-02-15', '13:00', '16:00', 'ห้องประชุมใหญ่',   'รายงานสรุปผลการดำเนินงานและเป้าหมายไตรมาสถัดไป'],
-      [generateUUID(), 'อบรม Microsoft 365 เพื่อการทำงานร่วมกัน', 'teach', 'todo',  'staff2@school.ac.th',  '2025-03-10', '2025-03-12', '08:30', '12:00', 'ห้องอบรม 2',       'การใช้งาน Teams, OneDrive และ Forms เพื่อการทำงาน'],
-      [generateUUID(), 'โครงการสำรวจความผูกพันและความพึงพอใจ',     'proj',  'todo',  'staff2@school.ac.th',  '2025-03-15', '2025-04-30', '',      '',      'ฝ่ายทรัพยากรบุคคล', 'จัดทำแบบสำรวจและประมวลผลข้อมูลความพึงพอใจบุคลากร'],
-      [generateUUID(), 'ประชุมปฐมนิเทศผู้ปกครอง ภาคเรียนที่ 1/2568', 'meet',  'todo',  'head.hr@school.ac.th', '2025-05-20', '2025-05-20', '14:00', '17:00', 'หอประชุมใหญ่',     'ชี้แจงแนวทางการเรียนการสอนและกฎระเบียบของสถาบัน'],
-      [generateUUID(), 'อบรมการตระหนักรู้ด้านความปลอดภัยไซเบอร์', 'teach', 'doing', 'head.it@school.ac.th', '2025-06-05', '2025-06-06', '09:00', '16:00', 'ห้องประชุม 2',     'หลักสูตร Cybersecurity Awareness สำหรับเจ้าหน้าที่ทุกฝ่าย'],
-      [generateUUID(), 'โครงการจัดทำคลังข้อมูลและแฟ้มประวัติบุคคล', 'proj',  'doing', 'staff1@school.ac.th',  '2025-07-01', '2025-08-31', '08:30', '16:30', 'ฝ่ายบุคคล HR',     'แปลงเอกสารสู่ระบบดิจิทัลและจัดหมวดหมู่ข้อมูล'],
-      [generateUUID(), 'กิจกรรมเฉลิมพระเกียรติวันแม่แห่งชาติ',     'other', 'todo',  'staff2@school.ac.th',  '2025-08-12', '2025-08-12', '08:00', '12:00', 'ลานอเนกประสงค์',   'พิธีถวายพระพรชัยมงคลและกิจกรรมบำเพ็ญประโยชน์']
+      [generateUUID(), 'ประชุมวางแผนโครงการประจำปี 2568',         'meet',  'done',  'head.it@school.ac.th', '2025-01-10', '2025-01-10', '09:00', '12:00', 'ห้องประชุม 1',     'ประชุมวางแผนงานประจำปีงบประมาณ 2568', nowStr],
+      [generateUUID(), 'อบรมเชิงปฏิบัติการระบบ ERP องค์กร',        'teach', 'done',  'staff1@school.ac.th',  '2025-01-20', '2025-01-22', '08:30', '16:30', 'ห้องคอมพิวเตอร์ 3', 'อบรมหลักสูตรการใช้งานระบบ ERP สำหรับบุคลากรใหม่', nowStr],
+      [generateUUID(), 'โครงการพัฒนาเว็บไซต์และพอร์ทัลสถาบัน',     'proj',  'doing', 'staff1@school.ac.th',  '2025-02-01', '2025-03-31', '08:30', '16:30', 'ฝ่ายสารสนเทศ IT',  'ปรับปรุงโฉมและฟังก์ชันเว็บไซต์หลักของสถาบัน', nowStr],
+      [generateUUID(), 'ประชุมคณะกรรมการบริหาร ประจำไตรมาส 1',    'meet',  'done',  'head.hr@school.ac.th', '2025-02-15', '2025-02-15', '13:00', '16:00', 'ห้องประชุมใหญ่',   'รายงานสรุปผลการดำเนินงานและเป้าหมายไตรมาสถัดไป', nowStr],
+      [generateUUID(), 'อบรม Microsoft 365 เพื่อการทำงานร่วมกัน', 'teach', 'todo',  'staff2@school.ac.th',  '2025-03-10', '2025-03-12', '08:30', '12:00', 'ห้องอบรม 2',       'การใช้งาน Teams, OneDrive และ Forms เพื่อการทำงาน', nowStr],
+      [generateUUID(), 'โครงการสำรวจความผูกพันและความพึงพอใจ',     'proj',  'todo',  'staff2@school.ac.th',  '2025-03-15', '2025-04-30', '',      '',      'ฝ่ายทรัพยากรบุคคล', 'จัดทำแบบสำรวจและประมวลผลข้อมูลความพึงพอใจบุคลากร', nowStr],
+      [generateUUID(), 'ประชุมปฐมนิเทศผู้ปกครอง ภาคเรียนที่ 1/2568', 'meet',  'todo',  'head.hr@school.ac.th', '2025-05-20', '2025-05-20', '14:00', '17:00', 'หอประชุมใหญ่',     'ชี้แจงแนวทางการเรียนการสอนและกฎระเบียบของสถาบัน', nowStr],
+      [generateUUID(), 'อบรมการตระหนักรู้ด้านความปลอดภัยไซเบอร์', 'teach', 'doing', 'head.it@school.ac.th', '2025-06-05', '2025-06-06', '09:00', '16:00', 'ห้องประชุม 2',     'หลักสูตร Cybersecurity Awareness สำหรับเจ้าหน้าที่ทุกฝ่าย', nowStr],
+      [generateUUID(), 'โครงการจัดทำคลังข้อมูลและแฟ้มประวัติบุคคล', 'proj',  'doing', 'staff1@school.ac.th',  '2025-07-01', '2025-08-31', '08:30', '16:30', 'ฝ่ายบุคคล HR',     'แปลงเอกสารสู่ระบบดิจิทัลและจัดหมวดหมู่ข้อมูล', nowStr],
+      [generateUUID(), 'กิจกรรมเฉลิมพระเกียรติวันแม่แห่งชาติ',     'other', 'todo',  'staff2@school.ac.th',  '2025-08-12', '2025-08-12', '08:00', '12:00', 'ลานอเนกประสงค์',   'พิธีถวายพระพรชัยมงคลและกิจกรรมบำเพ็ญประโยชน์', nowStr]
     ];
     sampleEvents.forEach(function(row) { evSheet.appendRow(row); });
 
     return {
       success: true,
-      message: 'สร้างและตั้งค่าข้อมูลตัวอย่างเรียบร้อยแล้ว (5 ผู้ใช้, 19 วันหยุด, 10 งาน)'
+      message: 'สร้างและตั้งค่าข้อมูลตัวอย่างเรียบร้อยแล้ว (5 ผู้ใช้, 19 วันหยุด, 10 งาน พร้อม updatedAt)'
     };
   } catch (err) {
     return { success: false, error: err.message };

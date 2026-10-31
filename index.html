@@ -3,10 +3,18 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ระบบปฏิทินการปฏิบัติงาน</title>
+<title>ระบบปฏิทินการปฏิบัติงาน (Real-time)</title>
+
+<!-- Fonts -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+<!-- Firebase App & Services (Compat SDK v10 สำหรับรันบน Browser ได้ทันทีโดยไม่ต้อง Build) -->
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+
 <style>
 /* =========================================================
    RESET & VARIABLES
@@ -23,30 +31,29 @@ body {
 }
 
 :root {
-  --bg: #f3f4f8;
+  --bg: #f1f5f9;
   --surface: #ffffff;
   --surface2: #f8fafc;
-  --surface3: #eef2f6;
+  --surface3: #e2e8f0;
   --border: #e2e8f0;
   --border-strong: #cbd5e1;
-  --text: #1e293b;
-  --text2: #64748b;
+  --text: #0f172a;
+  --text2: #475569;
   --text3: #94a3b8;
-  --primary: #1976D2;
-  --primary-hover: #1565C0;
+  --primary: #0284c7;
+  --primary-hover: #0369a1;
   --primary-light: #e0f2fe;
-  --primary-text: #0284c7;
   --shadow-sm: 0 1px 3px rgba(0,0,0,0.06);
-  --shadow: 0 4px 12px rgba(0,0,0,0.08);
-  --shadow-lg: 0 12px 28px rgba(0,0,0,0.14);
+  --shadow: 0 4px 14px rgba(0,0,0,0.08);
+  --shadow-lg: 0 14px 30px rgba(0,0,0,0.14);
   --radius: 12px;
   --radius-sm: 8px;
   --radius-full: 9999px;
-  
+
   /* Type Colors */
   --teach: #10b981;
   --teach-bg: #ecfdf5;
-  --meet: #3b82f6;
+  --meet: #2563eb;
   --meet-bg: #eff6ff;
   --proj: #f59e0b;
   --proj-bg: #fffbeb;
@@ -64,22 +71,21 @@ body {
 }
 
 [data-theme="dark"] {
-  --bg: #0f172a;
-  --surface: #1e293b;
-  --surface2: #172033;
-  --surface3: #243248;
-  --border: #334155;
-  --border-strong: #475569;
-  --text: #f1f5f9;
+  --bg: #090d16;
+  --surface: #131b2e;
+  --surface2: #1a243b;
+  --surface3: #263554;
+  --border: #263554;
+  --border-strong: #3b4f77;
+  --text: #f8fafc;
   --text2: #94a3b8;
   --text3: #64748b;
   --primary: #38bdf8;
   --primary-hover: #0ea5e9;
   --primary-light: #082f49;
-  --primary-text: #38bdf8;
-  --shadow-sm: 0 1px 3px rgba(0,0,0,0.3);
-  --shadow: 0 4px 12px rgba(0,0,0,0.35);
-  --shadow-lg: 0 12px 28px rgba(0,0,0,0.5);
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.4);
+  --shadow: 0 4px 14px rgba(0,0,0,0.45);
+  --shadow-lg: 0 14px 30px rgba(0,0,0,0.6);
   --teach-bg: #064e3b;
   --meet-bg: #1e3a8a;
   --proj-bg: #78350f;
@@ -109,17 +115,17 @@ body {
   display: flex;
   flex-direction: column;
   overflow-y: auto;
-  min-height: calc(100vh - 60px);
+  min-height: calc(100vh - 68px);
 }
 
 /* =========================================================
-   HEADER
+   HEADER & REALTIME STATUS
    ========================================================= */
 #header {
   background: var(--surface);
   border-bottom: 1px solid var(--border);
   padding: 0 20px;
-  height: 60px;
+  height: 68px;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -128,26 +134,49 @@ body {
   top: 0;
   z-index: 50;
 }
-.brand {
+.brand-area {
   display: flex;
-  align-items: center;
-  gap: 10px;
-  text-decoration: none;
-  color: var(--text);
-  font-weight: 700;
-  font-size: 1.1rem;
-}
-.brand-icon {
-  background: linear-gradient(135deg, #1976D2, #38bdf8);
-  color: #fff;
-  width: 36px;
-  height: 36px;
-  border-radius: var(--radius-sm);
-  display: flex;
-  align-items: center;
+  flex-direction: column;
   justify-content: center;
-  font-size: 1.2rem;
 }
+.brand-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.brand-title {
+  font-size: 1.08rem;
+  font-weight: 800;
+  color: var(--text);
+  line-height: 1.2;
+}
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  margin-top: 3px;
+  width: fit-content;
+}
+.status-pill.realtime {
+  background: rgba(16, 185, 129, 0.12);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+.status-pill.offline {
+  background: rgba(239, 68, 68, 0.12);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+.status-pill.demo {
+  background: rgba(245, 158, 11, 0.12);
+  color: #f59e0b;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
 .header-actions {
   display: flex;
   align-items: center;
@@ -196,7 +225,7 @@ body {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 4px 10px 4px 6px;
+  padding: 4px 12px 4px 6px;
   background: var(--surface2);
   border: 1px solid var(--border);
   border-radius: var(--radius-full);
@@ -204,8 +233,8 @@ body {
   cursor: pointer;
 }
 .user-avatar {
-  width: 28px;
-  height: 28px;
+  width: 30px;
+  height: 30px;
   border-radius: 50%;
   background: var(--primary);
   color: #fff;
@@ -214,7 +243,9 @@ body {
   justify-content: center;
   font-weight: 700;
   font-size: 0.85rem;
+  overflow: hidden;
 }
+.user-avatar img { width: 100%; height: 100%; object-fit: cover; }
 
 /* =========================================================
    SIDEBAR NAV
@@ -223,7 +254,7 @@ body {
   font-size: 0.72rem;
   text-transform: uppercase;
   color: var(--text3);
-  padding: 8px 20px 4px;
+  padding: 10px 20px 4px;
   font-weight: 700;
   letter-spacing: 0.5px;
 }
@@ -286,7 +317,7 @@ body {
   background: var(--surface);
   color: var(--primary);
   box-shadow: var(--shadow-sm);
-  font-weight: 600;
+  font-weight: 700;
 }
 .filter-select {
   padding: 6px 12px;
@@ -303,7 +334,7 @@ body {
   border-color: var(--primary);
 }
 #date-display {
-  font-weight: 700;
+  font-weight: 800;
   font-size: 1rem;
   color: var(--text);
   min-width: 170px;
@@ -320,7 +351,7 @@ body {
   cursor: pointer;
   font-family: inherit;
   font-size: 0.88rem;
-  font-weight: 500;
+  font-weight: 600;
   transition: all .2s;
   text-decoration: none;
   white-space: nowrap;
@@ -332,6 +363,7 @@ body {
 .btn-danger { background: var(--hol); color: #fff; }
 .btn-danger:hover { filter: brightness(1.08); }
 .btn-success { background: var(--teach); color: #fff; }
+.btn-success:hover { filter: brightness(1.08); }
 .btn-sm { padding: 5px 12px; font-size: 0.82rem; }
 
 /* =========================================================
@@ -368,8 +400,8 @@ body {
   flex-direction: column;
 }
 .month-day:hover { background: var(--surface2); }
-.month-day.other-month { background: var(--surface2); opacity: 0.55; }
-.month-day.weekend { background: rgba(239, 68, 68, 0.03); }
+.month-day.other-month { background: var(--surface2); opacity: 0.5; }
+.month-day.weekend { background: rgba(239, 68, 68, 0.02); }
 .month-day.holiday-day { background: var(--hol-bg); }
 .month-day.today { background: var(--primary-light); }
 .day-num-box {
@@ -433,7 +465,7 @@ body {
 .more-events {
   font-size: 0.7rem;
   color: var(--primary);
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
   padding: 2px 4px;
   margin-top: auto;
@@ -571,18 +603,18 @@ body {
   background: transparent;
   color: var(--text2);
   font-size: 0.75rem;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
   font-family: inherit;
   transition: all .2s;
   text-align: center;
 }
-.status-pill-btn.active.todo { background: var(--todo); color: #fff; }
+.status-pill-btn.active.todo  { background: var(--todo); color: #fff; }
 .status-pill-btn.active.doing { background: var(--doing); color: #fff; }
-.status-pill-btn.active.done { background: var(--done); color: #fff; }
+.status-pill-btn.active.done  { background: var(--done); color: #fff; }
 
 /* =========================================================
-   MODAL
+   MODAL & CONCURRENT WARNING
    ========================================================= */
 .modal-overlay {
   position: fixed;
@@ -635,6 +667,25 @@ body {
 }
 .close-btn:hover { background: var(--surface2); color: var(--text); }
 
+.concurrent-warning-banner {
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  color: #b45309;
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  margin-bottom: 14px;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  animation: fadeIn .2s;
+}
+[data-theme="dark"] .concurrent-warning-banner {
+  background: #451a03;
+  border-color: #78350f;
+  color: #fef3c7;
+}
+
 .form-group { margin-bottom: 14px; }
 .form-label {
   display: block;
@@ -657,7 +708,7 @@ body {
 .form-control:focus {
   outline: none;
   border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(25,118,210,0.12);
+  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
 }
 textarea.form-control { resize: vertical; min-height: 80px; }
 .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
@@ -693,7 +744,7 @@ textarea.form-control { resize: vertical; min-height: 80px; }
 .dash-card.c-done::before { background: var(--done); }
 .dash-card.c-overdue::before { background: var(--hol); }
 .dash-num { font-size: 2.2rem; font-weight: 800; color: var(--text); line-height: 1; }
-.dash-label { font-size: 0.85rem; color: var(--text2); margin-top: 6px; font-weight: 500; }
+.dash-label { font-size: 0.85rem; color: var(--text2); margin-top: 6px; font-weight: 600; }
 
 .dash-section {
   background: var(--surface);
@@ -753,7 +804,7 @@ textarea.form-control { resize: vertical; min-height: 80px; }
    ========================================================= */
 .notif-dropdown {
   position: absolute;
-  top: 54px;
+  top: 60px;
   right: 60px;
   background: var(--surface);
   border: 1px solid var(--border);
@@ -788,7 +839,7 @@ textarea.form-control { resize: vertical; min-height: 80px; }
 #login-screen {
   position: fixed;
   inset: 0;
-  background: linear-gradient(135deg, #1e3a8a, #0284c7);
+  background: linear-gradient(135deg, #0369a1, #1e3a8a);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -800,7 +851,7 @@ textarea.form-control { resize: vertical; min-height: 80px; }
   border-radius: 18px;
   padding: 36px;
   width: 100%;
-  max-width: 420px;
+  max-width: 440px;
   text-align: center;
   box-shadow: var(--shadow-lg);
   border: 1px solid var(--border);
@@ -809,7 +860,7 @@ textarea.form-control { resize: vertical; min-height: 80px; }
   width: 64px;
   height: 64px;
   border-radius: 16px;
-  background: linear-gradient(135deg, #1976D2, #38bdf8);
+  background: linear-gradient(135deg, #0284c7, #38bdf8);
   color: #fff;
   display: flex;
   align-items: center;
@@ -841,8 +892,8 @@ textarea.form-control { resize: vertical; min-height: 80px; }
   box-shadow: var(--shadow-lg);
   animation: slideUp .25s ease;
   min-width: 240px;
-  max-width: 360px;
-  font-weight: 500;
+  max-width: 380px;
+  font-weight: 600;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -887,7 +938,7 @@ textarea.form-control { resize: vertical; min-height: 80px; }
   #sidebar {
     position: fixed;
     left: 0;
-    top: 60px;
+    top: 68px;
     bottom: 0;
     z-index: 90;
     transform: translateX(-100%);
@@ -925,15 +976,26 @@ textarea.form-control { resize: vertical; min-height: 80px; }
      ========================================================= -->
 <div id="login-screen">
   <div class="login-box">
-    <div class="login-logo">📅</div>
+    <div class="login-logo">⚡</div>
     <div class="login-title">ระบบปฏิทินการปฏิบัติงาน</div>
-    <div class="login-subtitle">สถาบัน / องค์กร (ปี พ.ศ.)</div>
+    <div class="login-subtitle">ระบบเรียลไทม์ทุกเครื่อง (Firestore + Google Sheets)</div>
+
+    <!-- Firebase Google Sign In -->
+    <button class="btn btn-primary" style="width:100%;padding:12px;font-size:0.95rem;margin-bottom:14px" onclick="App.loginGoogle()">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" fill="#EA4335"/></svg>
+      เข้าสู่ระบบด้วย Google Account
+    </button>
+
+    <div style="display:flex;align-items:center;margin:16px 0;gap:10px">
+      <div style="flex:1;height:1px;background:var(--border)"></div>
+      <span style="font-size:0.75rem;color:var(--text3)">หรือเลือกผู้ใช้ทดสอบ (Demo Sandbox)</span>
+      <div style="flex:1;height:1px;background:var(--border)"></div>
+    </div>
 
     <div class="login-field">
-      <label class="form-label">เลือกผู้ใช้จำลอง (Demo Accounts)</label>
       <select class="form-control" id="demo-user-select" onchange="App.onDemoUserChange()">
-        <option value="">-- เลือกเพื่อเข้าสู่ระบบทันที --</option>
-        <option value="admin@school.ac.th">👑 ผู้ดูแลระบบ (admin) - ฝ่าย IT</option>
+        <option value="">-- เลือกบทบาทจำลองเพื่อเข้าสู่ระบบ --</option>
+        <option value="admin@school.ac.th">👑 ผู้ดูแลระบบ (admin) - แผนก IT</option>
         <option value="head.it@school.ac.th">👔 หัวหน้าฝ่าย IT (head) - แผนก IT</option>
         <option value="head.hr@school.ac.th">👔 หัวหน้าฝ่าย HR (head) - แผนก HR</option>
         <option value="staff1@school.ac.th">🧑‍💻 นายสมชาย ใจดี (staff) - เจ้าหน้าที่ IT</option>
@@ -941,22 +1003,12 @@ textarea.form-control { resize: vertical; min-height: 80px; }
       </select>
     </div>
 
-    <div style="display:flex;align-items:center;margin:16px 0;gap:10px">
-      <div style="flex:1;height:1px;background:var(--border)"></div>
-      <span style="font-size:0.75rem;color:var(--text3)">หรือกรอกอีเมล Google</span>
-      <div style="flex:1;height:1px;background:var(--border)"></div>
-    </div>
-
-    <div class="login-field">
-      <input class="form-control" id="custom-email-input" type="email" placeholder="example@school.ac.th หรือ gmail.com">
-    </div>
-
-    <button class="btn btn-primary" style="width:100%;padding:10px" onclick="App.login()">
-      🔐 เข้าสู่ระบบด้วย Google Account
+    <button class="btn btn-secondary" style="width:100%" onclick="App.loginDemo()">
+      🚀 ใช้งานในโหมดทดสอบ
     </button>
 
-    <div style="margin-top:16px;font-size:0.78rem;color:var(--text2);line-height:1.4">
-      เมื่อเชื่อมต่อ Google Apps Script Web App ระบบจะซิงก์ข้อมูลสองทิศทางกับ Google Sheets โดยอัตโนมัติ
+    <div style="margin-top:16px;font-size:0.75rem;color:var(--text3);line-height:1.4">
+      เมื่อเชื่อมต่อ Firebase แล้ว ผู้ใช้ทุกคนจะเห็นการเปลี่ยนแปลงพร้อมกันทันที (Real-time onSnapshot)
     </div>
   </div>
 </div>
@@ -968,14 +1020,20 @@ textarea.form-control { resize: vertical; min-height: 80px; }
   <!-- Header -->
   <header id="header">
     <button class="header-btn" onclick="App.toggleSidebar()" title="เปิด/ปิดเมนู">☰</button>
-    <div class="brand">
-      <div class="brand-icon">📅</div>
-      <span>ระบบปฏิทินการปฏิบัติงาน</span>
+    <div class="brand-area">
+      <div class="brand-title-wrap">
+        <span>📅</span>
+        <span class="brand-title">ระบบปฏิทินการปฏิบัติงาน</span>
+      </div>
+      <!-- Connection Status indicator -->
+      <span class="status-pill realtime" id="connection-status-pill">
+        <span id="conn-dot">🟢</span> <span id="conn-text">เรียลไทม์</span>
+      </span>
     </div>
 
     <div class="header-actions">
-      <!-- User Badge -->
-      <div class="user-profile-badge" title="ข้อมูลผู้ใช้ปัจจุบัน">
+      <!-- User Profile Badge -->
+      <div class="user-profile-badge" title="ข้อมูลผู้ใช้">
         <div class="user-avatar" id="hdr-avatar">U</div>
         <div style="text-align:left;line-height:1.2">
           <div style="font-weight:700" id="hdr-name">ผู้ใช้</div>
@@ -985,13 +1043,13 @@ textarea.form-control { resize: vertical; min-height: 80px; }
         </div>
       </div>
 
-      <!-- Settings / API Config -->
-      <button class="header-btn" onclick="App.openConfigModal()" title="ตั้งค่าการเชื่อมต่อ Google API">⚙️</button>
+      <!-- Settings / Config Modal -->
+      <button class="header-btn" onclick="App.openConfigModal()" title="ตั้งค่า Firebase & Google Sheets">⚙️</button>
 
-      <!-- Dark Mode -->
-      <button class="header-btn" id="dark-btn" onclick="App.toggleDark()" title="เปลี่ยนธีม มืด/สว่าง">🌙</button>
+      <!-- Dark Mode Toggle -->
+      <button class="header-btn" id="dark-btn" onclick="App.toggleDark()" title="เปลี่ยนโหมด มืด/สว่าง">🌙</button>
 
-      <!-- Notifications -->
+      <!-- Notification Bell -->
       <button class="header-btn" id="notif-btn" onclick="App.toggleNotifications()" title="การแจ้งเตือนงาน">
         🔔<span class="badge" id="notif-badge" style="display:none">0</span>
       </button>
@@ -1004,7 +1062,7 @@ textarea.form-control { resize: vertical; min-height: 80px; }
   <div class="app-body">
     <!-- Sidebar -->
     <nav id="sidebar">
-      <div class="nav-section-title">เมนูหลัก</div>
+      <div class="nav-section-title">เมนูการทำงาน</div>
       <div class="nav-item active" onclick="App.navigate('calendar')" data-page="calendar">
         <span class="nav-icon">📆</span>ปฏิทินงาน
       </div>
@@ -1020,17 +1078,20 @@ textarea.form-control { resize: vertical; min-height: 80px; }
         <div class="nav-item" onclick="App.navigate('holidays')" data-page="holidays" id="nav-holidays">
           <span class="nav-icon">🎌</span>จัดการวันหยุด
         </div>
+        <div class="nav-item" onclick="App.importFromGoogleSheets()">
+          <span class="nav-icon">📥</span>นำเข้าจากชีต
+        </div>
       </div>
 
       <div style="margin-top:auto;padding:16px 20px;font-size:0.75rem;color:var(--text3);border-top:1px solid var(--border)">
-        <div>สถานะ: <span id="api-status-badge" style="color:var(--proj);font-weight:600">Demo Mode</span></div>
-        <div style="margin-top:4px">ปี พ.ศ. ภาษาไทย 100%</div>
+        <div>ฐานข้อมูล: <strong id="db-type-label">Firestore</strong></div>
+        <div style="margin-top:2px">ปี พ.ศ. ภาษาไทย 100%</div>
       </div>
     </nav>
 
     <!-- Main Content -->
     <main id="main-content">
-      <!-- Calendar Filter Bar -->
+      <!-- Filter Bar (Calendar) -->
       <div id="filter-bar">
         <div class="view-tabs">
           <button class="view-tab active" onclick="App.setView('month')">เดือน</button>
@@ -1070,7 +1131,7 @@ textarea.form-control { resize: vertical; min-height: 80px; }
         </div>
       </div>
 
-      <!-- Pages Container -->
+      <!-- Pages -->
       <div id="page-calendar" id="calendar-wrapper"></div>
       <div id="page-dashboard" class="dashboard-container" style="display:none"></div>
       <div id="page-users" style="display:none;padding:20px"></div>
@@ -1092,10 +1153,10 @@ textarea.form-control { resize: vertical; min-height: 80px; }
 <div id="toast-container"></div>
 
 <!-- =========================================================
-     JAVASCRIPT APPLICATION CORE
+     JAVASCRIPT APPLICATION CORE (FIREBASE + REALTIME SYNC)
      ========================================================= -->
 <script>
-// Mock / Sample Data (สำหรับ Demo Mode เมื่อยังไม่ได้ใส่ Web App URL)
+// Mock default data (fallback cache)
 const DEFAULT_USERS = [
   { email: 'admin@school.ac.th',   name: 'ผู้ดูแลระบบ',    department: 'IT', role: 'admin' },
   { email: 'head.it@school.ac.th', name: 'หัวหน้าฝ่าย IT', department: 'IT', role: 'head'  },
@@ -1127,70 +1188,78 @@ const DEFAULT_HOLIDAYS = [
 ];
 
 const DEFAULT_EVENTS = [
-  { id: 'ev-1', title: 'ประชุมวางแผนโครงการประจำปี 2568',         type: 'meet',  status: 'done',  assignee: 'head.it@school.ac.th', start: '2025-01-10', end: '2025-01-10', startTime: '09:00', endTime: '12:00', location: 'ห้องประชุม 1',     detail: 'ประชุมวางแผนงานประจำปีงบประมาณ 2568 ร่วมกับคณะทำงาน' },
-  { id: 'ev-2', title: 'อบรมเชิงปฏิบัติการระบบ ERP องค์กร',        type: 'teach', status: 'done',  assignee: 'staff1@school.ac.th',  start: '2025-01-20', end: '2025-01-22', startTime: '08:30', endTime: '16:30', location: 'ห้องคอมพิวเตอร์ 3', detail: 'อบรมหลักสูตรการใช้งานระบบ ERP สำหรับบุคลากรใหม่' },
-  { id: 'ev-3', title: 'โครงการพัฒนาเว็บไซต์และพอร์ทัลสถาบัน',     type: 'proj',  status: 'doing', assignee: 'staff1@school.ac.th',  start: '2025-02-01', end: '2025-03-31', startTime: '08:30', endTime: '16:30', location: 'ฝ่ายสารสนเทศ IT',  detail: 'ปรับปรุงโฉมและฟังก์ชันเว็บไซต์หลักของสถาบัน' },
-  { id: 'ev-4', title: 'ประชุมคณะกรรมการบริหาร ประจำไตรมาส 1',    type: 'meet',  status: 'done',  assignee: 'head.hr@school.ac.th', start: '2025-02-15', end: '2025-02-15', startTime: '13:00', endTime: '16:00', location: 'ห้องประชุมใหญ่',   detail: 'รายงานสรุปผลการดำเนินงานและเป้าหมายไตรมาสถัดไป' },
-  { id: 'ev-5', title: 'อบรม Microsoft 365 เพื่อการทำงานร่วมกัน', type: 'teach', status: 'todo',  assignee: 'staff2@school.ac.th',  start: '2025-03-10', end: '2025-03-12', startTime: '08:30', endTime: '12:00', location: 'ห้องอบรม 2',       detail: 'การใช้งาน Teams, OneDrive และ Forms เพื่อการทำงาน' },
-  { id: 'ev-6', title: 'โครงการสำรวจความผูกพันและความพึงพอใจ',     type: 'proj',  status: 'todo',  assignee: 'staff2@school.ac.th',  start: '2025-03-15', end: '2025-04-30', startTime: '',      endTime: '',      location: 'ฝ่ายทรัพยากรบุคคล', detail: 'จัดทำแบบสำรวจและประมวลผลข้อมูลความพึงพอใจบุคลากร' },
-  { id: 'ev-7', title: 'ประชุมปฐมนิเทศผู้ปกครอง ภาคเรียนที่ 1/2568', type: 'meet',  status: 'todo',  assignee: 'head.hr@school.ac.th', start: '2025-05-20', end: '2025-05-20', startTime: '14:00', endTime: '17:00', location: 'หอประชุมใหญ่',     detail: 'ชี้แจงแนวทางการเรียนการสอนและกฎระเบียบของสถาบัน' },
-  { id: 'ev-8', title: 'อบรมการตระหนักรู้ด้านความปลอดภัยไซเบอร์', type: 'teach', status: 'doing', assignee: 'head.it@school.ac.th', start: '2025-06-05', end: '2025-06-06', startTime: '09:00', endTime: '16:00', location: 'ห้องประชุม 2',     detail: 'หลักสูตร Cybersecurity Awareness สำหรับเจ้าหน้าที่ทุกฝ่าย' },
-  { id: 'ev-9', title: 'โครงการจัดทำคลังข้อมูลและแฟ้มประวัติบุคคล', type: 'proj',  status: 'doing', assignee: 'staff1@school.ac.th',  start: '2025-07-01', end: '2025-08-31', startTime: '08:30', endTime: '16:30', location: 'ฝ่ายบุคคล HR',     detail: 'แปลงเอกสารสู่ระบบดิจิทัลและจัดหมวดหมู่ข้อมูล' },
-  { id: 'ev-10',title: 'กิจกรรมเฉลิมพระเกียรติวันแม่แห่งชาติ',     type: 'other', status: 'todo',  assignee: 'staff2@school.ac.th',  start: '2025-08-12', end: '2025-08-12', startTime: '08:00', endTime: '12:00', location: 'ลานอเนกประสงค์',   detail: 'พิธีถวายพระพรชัยมงคลและกิจกรรมบำเพ็ญประโยชน์' }
+  { id: 'ev-1', title: 'ประชุมวางแผนโครงการประจำปี 2568',         type: 'meet',  status: 'done',  assignee: 'head.it@school.ac.th', start: '2025-01-10', end: '2025-01-10', startTime: '09:00', endTime: '12:00', location: 'ห้องประชุม 1',     detail: 'ประชุมวางแผนงานประจำปีงบประมาณ 2568', updatedAt: '2025-01-10 12:00:00' },
+  { id: 'ev-2', title: 'อบรมเชิงปฏิบัติการระบบ ERP องค์กร',        type: 'teach', status: 'done',  assignee: 'staff1@school.ac.th',  start: '2025-01-20', end: '2025-01-22', startTime: '08:30', endTime: '16:30', location: 'ห้องคอมพิวเตอร์ 3', detail: 'อบรมหลักสูตรการใช้งานระบบ ERP สำหรับบุคลากรใหม่', updatedAt: '2025-01-22 17:00:00' },
+  { id: 'ev-3', title: 'โครงการพัฒนาเว็บไซต์และพอร์ทัลสถาบัน',     type: 'proj',  status: 'doing', assignee: 'staff1@school.ac.th',  start: '2025-02-01', end: '2025-03-31', startTime: '08:30', endTime: '16:30', location: 'ฝ่ายสารสนเทศ IT',  detail: 'ปรับปรุงโฉมและฟังก์ชันเว็บไซต์หลักของสถาบัน', updatedAt: '2025-02-01 09:00:00' },
+  { id: 'ev-4', title: 'ประชุมคณะกรรมการบริหาร ประจำไตรมาส 1',    type: 'meet',  status: 'done',  assignee: 'head.hr@school.ac.th', start: '2025-02-15', end: '2025-02-15', startTime: '13:00', endTime: '16:00', location: 'ห้องประชุมใหญ่',   detail: 'รายงานสรุปผลการดำเนินงานและเป้าหมายไตรมาสถัดไป', updatedAt: '2025-02-15 16:30:00' },
+  { id: 'ev-5', title: 'อบรม Microsoft 365 เพื่อการทำงานร่วมกัน', type: 'teach', status: 'todo',  assignee: 'staff2@school.ac.th',  start: '2025-03-10', end: '2025-03-12', startTime: '08:30', endTime: '12:00', location: 'ห้องอบรม 2',       detail: 'การใช้งาน Teams, OneDrive และ Forms เพื่อการทำงาน', updatedAt: '2025-03-01 10:00:00' },
+  { id: 'ev-6', title: 'โครงการสำรวจความผูกพันและความพึงพอใจ',     type: 'proj',  status: 'todo',  assignee: 'staff2@school.ac.th',  start: '2025-03-15', end: '2025-04-30', startTime: '',      endTime: '',      location: 'ฝ่ายทรัพยากรบุคคล', detail: 'จัดทำแบบสำรวจและประมวลผลข้อมูลความพึงพอใจบุคลากร', updatedAt: '2025-03-05 14:00:00' },
+  { id: 'ev-7', title: 'ประชุมปฐมนิเทศผู้ปกครอง ภาคเรียนที่ 1/2568', type: 'meet',  status: 'todo',  assignee: 'head.hr@school.ac.th', start: '2025-05-20', end: '2025-05-20', startTime: '14:00', endTime: '17:00', location: 'หอประชุมใหญ่',     detail: 'ชี้แจงแนวทางการเรียนการสอนและกฎระเบียบของสถาบัน', updatedAt: '2025-05-01 11:00:00' },
+  { id: 'ev-8', title: 'อบรมการตระหนักรู้ด้านความปลอดภัยไซเบอร์', type: 'teach', status: 'doing', assignee: 'head.it@school.ac.th', start: '2025-06-05', end: '2025-06-06', startTime: '09:00', endTime: '16:00', location: 'ห้องประชุม 2',     detail: 'หลักสูตร Cybersecurity Awareness สำหรับเจ้าหน้าที่ทุกฝ่าย', updatedAt: '2025-06-05 09:00:00' },
+  { id: 'ev-9', title: 'โครงการจัดทำคลังข้อมูลและแฟ้มประวัติบุคคล', type: 'proj',  status: 'doing', assignee: 'staff1@school.ac.th',  start: '2025-07-01', end: '2025-08-31', startTime: '08:30', endTime: '16:30', location: 'ฝ่ายบุคคล HR',     detail: 'แปลงเอกสารสู่ระบบดิจิทัลและจัดหมวดหมู่ข้อมูล', updatedAt: '2025-07-01 08:30:00' },
+  { id: 'ev-10',title: 'กิจกรรมเฉลิมพระเกียรติวันแม่แห่งชาติ',     type: 'other', status: 'todo',  assignee: 'staff2@school.ac.th',  start: '2025-08-12', end: '2025-08-12', startTime: '08:00', endTime: '12:00', location: 'ลานอเนกประสงค์',   detail: 'พิธีถวายพระพรชัยมงคลและกิจกรรมบำเพ็ญประโยชน์', updatedAt: '2025-08-01 08:00:00' }
 ];
 
 function genId() {
-  return 'id_' + Math.random().toString(36).substring(2, 11);
+  return 'ev_' + Date.now().toString(36) + '_' + Math.random().toString(36).substring(2, 7);
+}
+
+function getNowTimestamp() {
+  const d = new Date();
+  const pad = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
 }
 
 const App = {
-  apiUrl: '', // วาง Web App URL ที่นี่ หรือตั้งค่าผ่านปุ่ม ⚙️ ในแอป
+  // Configs
+  firebaseConfig: null,
+  sheetsApiUrl: '',
+  db: null,
+  auth: null,
+  isFirebaseActive: false,
+  unsubscribeEvents: null,
+  unsubscribeUsers: null,
+  unsubscribeHolidays: null,
+
+  // App State
   currentUser: null,
   currentView: 'month',
-  currentDate: new Date(2025, 0, 15), // ตั้งต้นมกราคม 2568 (เพื่อแสดงข้อมูลตัวอย่าง)
+  currentDate: new Date(2025, 0, 15),
   events: [],
   users: [],
   holidays: [],
   filters: { assignee: '', type: '', status: '' },
   _notifications: [],
 
+  // Concurrent Editing State Tracker
+  currentlyEditingId: null,
+  currentlyEditingTimestamp: null,
+
   // ---------- INIT ----------
   async init() {
-    // โหลด theme
+    // 1. Theme
     const savedTheme = localStorage.getItem('app_theme') || 'light';
     document.documentElement.setAttribute('data-theme', savedTheme);
     document.getElementById('dark-btn').textContent = savedTheme === 'dark' ? '☀️' : '🌙';
 
-    // โหลด apiUrl จาก localStorage ถ้ามี
-    const storedApiUrl = localStorage.getItem('gas_api_url');
-    if (storedApiUrl) {
-      this.apiUrl = storedApiUrl;
+    // 2. Load Offline / Cache data
+    this._loadCache();
+
+    // 3. Network listeners
+    window.addEventListener('online', () => this.updateConnectionStatus(true));
+    window.addEventListener('offline', () => this.updateConnectionStatus(false));
+
+    // 4. Load Saved Config
+    const savedFb = localStorage.getItem('app_firebase_config');
+    if (savedFb) {
+      try { this.firebaseConfig = JSON.parse(savedFb); } catch(e){}
     }
+    this.sheetsApiUrl = localStorage.getItem('gas_api_url') || '';
 
-    this._updateApiStatusBadge();
+    // 5. Initialize Firebase
+    this.initFirebase();
 
-    // โหลด Local Storage หรือค่าเริ่มต้น
-    this._loadLocalState();
-
-    // ตรวจสอบ Google Script Environment (หาก Deploy ตรงใน Google Apps Script)
-    if (typeof google !== 'undefined' && google.script && google.script.run) {
-      this.showLoading(true, 'กำลังตรวจสอบ Google Account...');
-      google.script.run
-        .withSuccessHandler(res => {
-          this.showLoading(false);
-          if (res && res.data) {
-            this.currentUser = res.data;
-            this._showApp();
-          }
-        })
-        .withFailureHandler(() => {
-          this.showLoading(false);
-        })
-        .routeAction('getCurrentUser', {}, 'GET');
-      return;
-    }
-
-    // ตรวจสอบเซสชันผู้ใช้ที่เคยล็อกอินไว้
+    // 6. Check Auth Session
     const savedUser = localStorage.getItem('app_current_user');
     if (savedUser) {
       try {
@@ -1202,146 +1271,277 @@ const App = {
     }
   },
 
-  _loadLocalState() {
-    const ev = localStorage.getItem('app_events');
+  _loadCache() {
+    const ev = localStorage.getItem('app_cache_events');
     this.events = ev ? JSON.parse(ev) : [...DEFAULT_EVENTS];
 
-    const u = localStorage.getItem('app_users');
+    const u = localStorage.getItem('app_cache_users');
     this.users = u ? JSON.parse(u) : [...DEFAULT_USERS];
 
-    const h = localStorage.getItem('app_holidays');
+    const h = localStorage.getItem('app_cache_holidays');
     this.holidays = h ? JSON.parse(h) : [...DEFAULT_HOLIDAYS];
   },
 
-  _saveLocalState() {
-    localStorage.setItem('app_events',   JSON.stringify(this.events));
-    localStorage.setItem('app_users',    JSON.stringify(this.users));
-    localStorage.setItem('app_holidays', JSON.stringify(this.holidays));
+  _saveCache() {
+    localStorage.setItem('app_cache_events',   JSON.stringify(this.events));
+    localStorage.setItem('app_cache_users',    JSON.stringify(this.users));
+    localStorage.setItem('app_cache_holidays', JSON.stringify(this.holidays));
   },
 
-  _updateApiStatusBadge() {
-    const badge = document.getElementById('api-status-badge');
-    if (badge) {
-      if (this.apiUrl) {
-        badge.textContent = 'Google Sheets Connected';
-        badge.style.color = 'var(--teach)';
-      } else {
-        badge.textContent = 'Demo Mode (Offline)';
-        badge.style.color = 'var(--proj)';
-      }
-    }
-  },
-
-  // ---------- API CALLER ----------
-  async api(action, payload = {}) {
-    if (!this.apiUrl) {
-      // Offline / Demo Mode: จำลองผลลัพธ์
-      return { success: true, isDemo: true };
-    }
-
-    this.showLoading(true, 'กำลังเชื่อมต่อ Google Sheets...');
-    try {
-      const bodyData = {
-        action: action,
-        userEmail: this.currentUser ? this.currentUser.email : '',
-        ...payload
-      };
-
-      const resp = await fetch(this.apiUrl, {
-        method: 'POST',
-        mode: 'cors',
-        redirect: 'follow',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify(bodyData)
-      });
-
-      const res = await resp.json();
-      if (!res.success && res.error) {
-        this.showToast(res.error, 'error');
-      }
-      return res;
-    } catch (err) {
-      this.showToast('การเชื่อมต่อ Google API ขัดข้อง: ' + err.message, 'error');
-      return { success: false, error: err.message };
-    } finally {
-      this.showLoading(false);
-    }
-  },
-
-  // ดึงข้อมูลทั้งหมดจาก Google Sheet
-  async refreshAllData() {
-    if (!this.apiUrl) return;
-
-    this.showLoading(true, 'กำลังซิงก์ข้อมูลจาก Google Sheets...');
-    try {
-      const [evRes, uRes, holRes] = await Promise.all([
-        this.api('getEvents'),
-        this.api('getUsers'),
-        this.api('getHolidays')
-      ]);
-
-      if (evRes.success && evRes.data)   this.events   = evRes.data;
-      if (uRes.success && uRes.data)     this.users    = uRes.data;
-      if (holRes.success && holRes.data) this.holidays = holRes.data;
-
-      this._saveLocalState();
-      this._fillAssigneeFilter();
-      this.renderCalendar();
-      this._checkNotifications();
-    } catch (err) {
-      this.showToast('ไม่สามารถดึงข้อมูลจากชีตได้: ' + err.message, 'error');
-    } finally {
-      this.showLoading(false);
-    }
-  },
-
-  // ---------- AUTHENTICATION ----------
-  onDemoUserChange() {
-    const sel = document.getElementById('demo-user-select');
-    if (sel.value) {
-      document.getElementById('custom-email-input').value = sel.value;
-    }
-  },
-
-  async login() {
-    const emailInput = document.getElementById('custom-email-input').value.trim();
-    const demoSelect = document.getElementById('demo-user-select').value;
-    const email = emailInput || demoSelect;
-
-    if (!email) {
-      this.showToast('กรุณาเลือกผู้ใช้หรือระบุอีเมล Google', 'warning');
+  // ---------- FIREBASE INITIALIZATION & REALTIME LISTENERS ----------
+  initFirebase() {
+    if (!this.firebaseConfig || !this.firebaseConfig.apiKey) {
+      this.isFirebaseActive = false;
+      this.updateConnectionStatus('demo');
+      document.getElementById('db-type-label').textContent = 'Demo Mode (Offline)';
       return;
     }
 
-    // ค้นหาใน Users รายการปัจจุบัน
-    let user = this.users.find(u => u.email.toLowerCase() === email.toLowerCase());
+    try {
+      if (!firebase.apps.length) {
+        firebase.initializeApp(this.firebaseConfig);
+      }
+      this.db = firebase.firestore();
+      this.auth = firebase.auth();
 
-    // ถ้าไม่พบ ให้สร้าง user เริ่มต้น
-    if (!user) {
-      user = {
-        email: email,
-        name: email.split('@')[0],
-        department: 'ทั่วไป',
-        role: 'staff'
-      };
-      this.users.push(user);
-      this._saveLocalState();
+      // Enable offline persistence in Firestore
+      try {
+        this.db.enablePersistence({ synchronizeTabs: true }).catch(() => {});
+      } catch (err) {}
+
+      this.isFirebaseActive = true;
+      document.getElementById('db-type-label').textContent = 'Firestore Realtime';
+      this.updateConnectionStatus(true);
+
+      // Listen for Auth Changes
+      this.auth.onAuthStateChanged(async user => {
+        if (user) {
+          await this._syncUserProfile(user);
+          this._startRealtimeListeners();
+        } else if (!this.currentUser) {
+          // No user
+        }
+      });
+
+    } catch (err) {
+      console.error('Firebase init error:', err);
+      this.isFirebaseActive = false;
+      this.updateConnectionStatus('demo');
+      this.showToast('เชื่อมต่อ Firebase ไม่สำเร็จ: ' + err.message, 'error');
+    }
+  },
+
+  updateConnectionStatus(status) {
+    const pill = document.getElementById('connection-status-pill');
+    const dot  = document.getElementById('conn-dot');
+    const txt  = document.getElementById('conn-text');
+    if (!pill) return;
+
+    if (status === true || status === 'realtime') {
+      pill.className = 'status-pill realtime';
+      dot.textContent = '🟢';
+      txt.textContent = 'เรียลไทม์';
+    } else if (status === false || status === 'offline') {
+      pill.className = 'status-pill offline';
+      dot.textContent = '⚠️';
+      txt.textContent = 'ออฟไลน์';
+    } else {
+      pill.className = 'status-pill demo';
+      dot.textContent = '⚙️';
+      txt.textContent = 'จำลองระบบ (Demo)';
+    }
+  },
+
+  _startRealtimeListeners() {
+    if (!this.db || !this.isFirebaseActive) return;
+
+    // 1. REALTIME EVENTS LISTENER
+    if (this.unsubscribeEvents) this.unsubscribeEvents();
+    this.unsubscribeEvents = this.db.collection('events').onSnapshot(
+      snapshot => {
+        const isFromCache = snapshot.metadata.fromCache;
+        this.updateConnectionStatus(isFromCache && !navigator.onLine ? 'offline' : 'realtime');
+
+        const newEvents = [];
+        snapshot.forEach(doc => {
+          newEvents.push({ id: doc.id, ...doc.data() });
+        });
+
+        // ตรวจสอบการแก้ไขงานเดียวกันจากเครื่องอื่น (Concurrent Edit Detection)
+        if (this.currentlyEditingId) {
+          snapshot.docChanges().forEach(change => {
+            if (change.doc.id === this.currentlyEditingId && change.type === 'modified') {
+              const changedData = change.doc.data();
+              if (changedData.updatedAt !== this.currentlyEditingTimestamp) {
+                this._onConcurrentEditDetected(changedData);
+              }
+            }
+          });
+        }
+
+        this.events = newEvents;
+        this._saveCache();
+        this.renderCalendar();
+        this._checkNotifications();
+        if (document.getElementById('page-dashboard').style.display !== 'none') {
+          this.renderDashboard();
+        }
+      },
+      error => {
+        console.warn('Events listener error:', error);
+        this.updateConnectionStatus('offline');
+      }
+    );
+
+    // 2. REALTIME USERS LISTENER
+    if (this.unsubscribeUsers) this.unsubscribeUsers();
+    this.unsubscribeUsers = this.db.collection('users').onSnapshot(snapshot => {
+      const uList = [];
+      snapshot.forEach(doc => uList.push({ email: doc.id, ...doc.data() }));
+      if (uList.length > 0) {
+        this.users = uList;
+        this._saveCache();
+        this._fillAssigneeFilter();
+        // Update current user info if role changed
+        if (this.currentUser) {
+          const fresh = this.users.find(u => u.email.toLowerCase() === this.currentUser.email.toLowerCase());
+          if (fresh) {
+            this.currentUser = { ...this.currentUser, ...fresh };
+            this._updateHeaderUser();
+          }
+        }
+      }
+    });
+
+    // 3. REALTIME HOLIDAYS LISTENER
+    if (this.unsubscribeHolidays) this.unsubscribeHolidays();
+    this.unsubscribeHolidays = this.db.collection('holidays').onSnapshot(snapshot => {
+      const hList = [];
+      snapshot.forEach(doc => hList.push({ id: doc.id, ...doc.data() }));
+      if (hList.length > 0) {
+        this.holidays = hList;
+        this._saveCache();
+        this.renderCalendar();
+      }
+    });
+  },
+
+  _onConcurrentEditDetected(newData) {
+    const banner = document.getElementById('concurrent-warning-banner');
+    if (banner) {
+      banner.style.display = 'flex';
+      banner.innerHTML = `⚠️ <strong>ตรวจพบการแก้ไขจากเครื่องอื่น:</strong> ระบบได้อัปเดตข้อมูลเป็นเวอร์ชันล่าสุดเรียบร้อยแล้ว`;
+    }
+    // อัปเดตข้อมูลในฟอร์มปัจจุบันให้เป็นข้อมูลล่าสุด
+    const title = document.getElementById('ev-title');
+    const type = document.getElementById('ev-type');
+    const status = document.getElementById('ev-status');
+    const start = document.getElementById('ev-start');
+    const end = document.getElementById('ev-end');
+    const detail = document.getElementById('ev-detail');
+
+    if (title) title.value = newData.title || '';
+    if (type)  type.value  = newData.type  || 'other';
+    if (status)status.value= newData.status|| 'todo';
+    if (start) start.value = newData.start || '';
+    if (end)   end.value   = newData.end   || '';
+    if (detail)detail.value= newData.detail|| '';
+
+    this.currentlyEditingTimestamp = newData.updatedAt;
+    this.showToast('มีคนอื่นแก้ไขงานนี้พร้อมกัน ข้อมูลถูกอัปเดตเป็นล่าสุดแล้ว', 'warning');
+  },
+
+  // ---------- AUTHENTICATION ----------
+  async loginGoogle() {
+    if (!this.isFirebaseActive) {
+      this.showToast('กรุณาคลิก ⚙️ เพื่อตั้งค่า Firebase Config ก่อน หรือเลือกผู้ใช้ทดสอบ', 'warning');
+      this.openConfigModal();
+      return;
+    }
+    this.showLoading(true, 'กำลังเข้าสู่ระบบ Google...');
+    try {
+      const provider = new firebase.auth.GoogleAuthProvider();
+      const res = await this.auth.signInWithPopup(provider);
+      await this._syncUserProfile(res.user);
+      this._showApp();
+      this.showToast(`ยินดีต้อนรับ คุณ${this.currentUser.name} (${this.getRoleLabel(this.currentUser.role)})`, 'success');
+    } catch (err) {
+      this.showToast('เข้าสู่ระบบไม่สำเร็จ: ' + err.message, 'error');
+    } finally {
+      this.showLoading(false);
+    }
+  },
+
+  async _syncUserProfile(user) {
+    const email = user.email.toLowerCase();
+    let userData = {
+      email: email,
+      name: user.displayName || email.split('@')[0],
+      department: 'ทั่วไป',
+      role: 'staff',
+      photoURL: user.photoURL || ''
+    };
+
+    if (this.db) {
+      try {
+        const userDoc = await this.db.collection('users').doc(email).get();
+        if (userDoc.exists) {
+          userData = { ...userData, ...userDoc.data() };
+        } else {
+          // หากยังไม่มี ให้สร้างเอกสารผู้ใช้ใหม่ใน Firestore
+          // ตรวจสอบอีเมลถ้าเป็น admin ตั้งต้น
+          if (email.includes('admin')) {
+            userData.role = 'admin';
+            userData.department = 'IT';
+          }
+          await this.db.collection('users').doc(email).set(userData);
+        }
+      } catch (e) {
+        console.warn('Sync user profile error:', e);
+      }
     }
 
-    this.currentUser = user;
-    localStorage.setItem('app_current_user', JSON.stringify(user));
+    this.currentUser = userData;
+    localStorage.setItem('app_current_user', JSON.stringify(userData));
+  },
 
+  onDemoUserChange() {
+    const sel = document.getElementById('demo-user-select');
+    if (sel.value) {
+      const u = this.users.find(x => x.email === sel.value) || DEFAULT_USERS.find(x => x.email === sel.value);
+      if (u) {
+        this.currentUser = u;
+        localStorage.setItem('app_current_user', JSON.stringify(u));
+      }
+    }
+  },
+
+  loginDemo() {
+    const sel = document.getElementById('demo-user-select');
+    if (!sel.value) {
+      this.showToast('กรุณาเลือกบทบาทผู้ใช้จำลองก่อน', 'warning');
+      return;
+    }
+    const u = this.users.find(x => x.email === sel.value) || DEFAULT_USERS.find(x => x.email === sel.value);
+    this.currentUser = u;
+    localStorage.setItem('app_current_user', JSON.stringify(u));
     this._showApp();
-    this.showToast(`ยินดีต้อนรับ คุณ${user.name} (${this.getRoleLabel(user.role)})`, 'success');
+    this.showToast(`เข้าสู่ระบบในโหมดจำลอง: คุณ${u.name} (${this.getRoleLabel(u.role)})`, 'info');
 
-    // ถ้าเชื่อม API ให้ซิงก์ข้อมูลสด
-    if (this.apiUrl) {
-      await this.refreshAllData();
+    if (this.isFirebaseActive) {
+      this._startRealtimeListeners();
     }
   },
 
   logout() {
     if (!confirm('คุณต้องการออกจากระบบหรือไม่?')) return;
+    if (this.auth && this.auth.currentUser) {
+      this.auth.signOut().catch(() => {});
+    }
+    if (this.unsubscribeEvents) this.unsubscribeEvents();
+    if (this.unsubscribeUsers) this.unsubscribeUsers();
+    if (this.unsubscribeHolidays) this.unsubscribeHolidays();
+
     localStorage.removeItem('app_current_user');
     this.currentUser = null;
     document.getElementById('app').style.display = 'none';
@@ -1352,19 +1552,32 @@ const App = {
     document.getElementById('login-screen').style.display = 'none';
     document.getElementById('app').style.display = 'flex';
 
-    const u = this.currentUser;
-    document.getElementById('hdr-name').textContent = u.name;
-    document.getElementById('hdr-avatar').textContent = u.name.charAt(0);
-    document.getElementById('hdr-dept').textContent = u.department || 'ไม่ระบุแผนก';
-    document.getElementById('hdr-role').textContent = this.getRoleLabel(u.role);
-
-    // เมนูเฉพาะ Admin
-    const isAdmin = u.role === 'admin';
-    document.getElementById('admin-menu-section').style.display = isAdmin ? 'block' : 'none';
-
+    this._updateHeaderUser();
     this._fillAssigneeFilter();
     this.navigate('calendar');
     this._checkNotifications();
+
+    if (this.isFirebaseActive) {
+      this._startRealtimeListeners();
+    }
+  },
+
+  _updateHeaderUser() {
+    const u = this.currentUser;
+    if (!u) return;
+    document.getElementById('hdr-name').textContent = u.name;
+    const avatarEl = document.getElementById('hdr-avatar');
+    if (u.photoURL) {
+      avatarEl.innerHTML = `<img src="${u.photoURL}" alt="${u.name}">`;
+    } else {
+      avatarEl.textContent = u.name.charAt(0);
+    }
+    document.getElementById('hdr-dept').textContent = u.department || 'ทั่วไป';
+    document.getElementById('hdr-role').textContent = this.getRoleLabel(u.role);
+
+    // เมนู Admin
+    const isAdmin = (u.role === 'admin');
+    document.getElementById('admin-menu-section').style.display = isAdmin ? 'block' : 'none';
   },
 
   _fillAssigneeFilter() {
@@ -1415,7 +1628,7 @@ const App = {
     document.getElementById('dark-btn').textContent = next === 'dark' ? '☀️' : '🌙';
   },
 
-  // ---------- DATE & THAI FORMAT HELPERS ----------
+  // ---------- DATE HELPERS (พ.ศ.) ----------
   toYMD(d) {
     const y = d.getFullYear();
     const m = String(d.getMonth() + 1).padStart(2, '0');
@@ -1426,7 +1639,7 @@ const App = {
   formatThaiDate(dateStr) {
     if (!dateStr) return '';
     const parts = dateStr.split('-');
-    if (parts.length !== 3) return dateStr;
+    if (parts.length < 3) return dateStr;
     const y = Number(parts[0]), m = Number(parts[1]), day = Number(parts[2]);
     const months = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
     return `${day} ${months[m - 1]} ${y + 543}`;
@@ -1438,29 +1651,15 @@ const App = {
   },
 
   getTypeLabel(t) {
-    return {
-      teach: 'สอน/อบรม',
-      meet:  'ประชุม',
-      proj:  'โครงการ',
-      hol:   'วันหยุด',
-      other: 'อื่นๆ'
-    }[t] || t;
+    return { teach: 'สอน/อบรม', meet: 'ประชุม', proj: 'โครงการ', hol: 'วันหยุด', other: 'อื่นๆ' }[t] || t;
   },
 
   getStatusLabel(s) {
-    return {
-      todo:  'รอดำเนินการ',
-      doing: 'กำลังดำเนินการ',
-      done:  'เสร็จแล้ว'
-    }[s] || s;
+    return { todo: 'รอดำเนินการ', doing: 'กำลังดำเนินการ', done: 'เสร็จแล้ว' }[s] || s;
   },
 
   getRoleLabel(r) {
-    return {
-      admin: 'ผู้ดูแลระบบ',
-      head:  'หัวหน้าแผนก',
-      staff: 'เจ้าหน้าที่'
-    }[r] || r;
+    return { admin: 'ผู้ดูแลระบบ', head: 'หัวหน้าแผนก', staff: 'เจ้าหน้าที่' }[r] || r;
   },
 
   getUserName(email) {
@@ -1468,7 +1667,7 @@ const App = {
     return u ? u.name : email;
   },
 
-  // ---------- VIEW SWITCHING & FILTERS ----------
+  // ---------- CALENDAR VIEWS ----------
   setView(v) {
     this.currentView = v;
     document.querySelectorAll('.view-tab').forEach((t, i) => {
@@ -1508,16 +1707,14 @@ const App = {
   getFilteredEvents() {
     const u = this.currentUser;
     return this.events.filter(ev => {
-      // สิทธิ์: head เห็นทั้งแผนก
+      // สิทธิ์: head เห็นทั้งแผนกของตน
       if (u && u.role === 'head' && u.department) {
         const deptUsers = this.users.filter(x => x.department === u.department).map(x => x.email);
         if (deptUsers.indexOf(ev.assignee) === -1 && ev.assignee !== u.email) {
-          // ถ้าไม่ใช่คนในแผนก ไม่แสดง
           return false;
         }
       }
 
-      // กรองจาก Filter Controls
       if (this.filters.assignee && ev.assignee !== this.filters.assignee) return false;
       if (this.filters.type     && ev.type     !== this.filters.type)     return false;
       if (this.filters.status   && ev.status   !== this.filters.status)   return false;
@@ -1531,11 +1728,10 @@ const App = {
     return map;
   },
 
-  // ---------- RENDER CALENDAR ----------
+  // ---------- RENDER MONTH ----------
   renderCalendar() {
     const wrap = document.getElementById('page-calendar');
     wrap.innerHTML = '';
-
     if (this.currentView === 'month')      this.renderMonth(wrap);
     else if (this.currentView === 'week')  this.renderWeek(wrap);
     else                                   this.renderDay(wrap);
@@ -1549,7 +1745,7 @@ const App = {
 
     const firstDay = new Date(year, month, 1);
     const lastDay  = new Date(year, month + 1, 0);
-    const startDow = firstDay.getDay(); // 0=อา, 6=ส
+    const startDow = firstDay.getDay();
     const totalDays = lastDay.getDate();
     const todayStr  = this.toYMD(new Date());
     const holMap    = this.getHolidayMap();
@@ -1561,15 +1757,11 @@ const App = {
       html += `<div class="month-header-cell${(idx === 0 || idx === 6) ? ' weekend' : ''}">${dn}</div>`;
     });
 
-    // วันก่อนหน้าเดือน
     for (let i = 0; i < startDow; i++) {
       const pd = new Date(year, month, -startDow + i + 1);
-      html += `<div class="month-day other-month">
-        <div class="day-num-box"><span class="day-num">${pd.getDate()}</span></div>
-      </div>`;
+      html += `<div class="month-day other-month"><div class="day-num-box"><span class="day-num">${pd.getDate()}</span></div></div>`;
     }
 
-    // วันในเดือนปัจจุบัน
     for (let day = 1; day <= totalDays; day++) {
       const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
       const hol = holMap[dateStr];
@@ -1577,7 +1769,6 @@ const App = {
       const dow = new Date(year, month, day).getDay();
       const isWeekend = (dow === 0 || dow === 6);
 
-      // งานที่ครอบคลุมวันนี้ (รองรับงานข้ามหลายวัน)
       const dayEvents = events.filter(ev => {
         const evEnd = ev.end || ev.start;
         return ev.start <= dateStr && evEnd >= dateStr;
@@ -1591,7 +1782,7 @@ const App = {
       html += `<div class="${cls}" onclick="App.openEventModal('${dateStr}', null)">
         <div class="day-num-box">
           <span class="day-num">${day}</span>
-          ${dayEvents.length > 0 ? `<span style="font-size:0.65rem;color:var(--text3)">${dayEvents.length} รายการ</span>` : ''}
+          ${dayEvents.length > 0 ? `<span style="font-size:0.65rem;color:var(--text3)">${dayEvents.length}</span>` : ''}
         </div>`;
 
       if (hol) {
@@ -1610,19 +1801,16 @@ const App = {
       });
 
       if (dayEvents.length > maxShow) {
-        html += `<div class="more-events" onclick="event.stopPropagation();App.openDaySummaryModal('${dateStr}')">+ อื่นๆ อีก ${dayEvents.length - maxShow} รายการ</div>`;
+        html += `<div class="more-events" onclick="event.stopPropagation();App.openDaySummaryModal('${dateStr}')">+ อื่นๆ อีก ${dayEvents.length - maxShow} งาน</div>`;
       }
 
       html += `</div>`;
     }
 
-    // วันหลังเดือน (เติมให้เต็มแถว)
     const totalRendered = startDow + totalDays;
     const remaining = (7 - (totalRendered % 7)) % 7;
     for (let i = 1; i <= remaining; i++) {
-      html += `<div class="month-day other-month">
-        <div class="day-num-box"><span class="day-num">${i}</span></div>
-      </div>`;
+      html += `<div class="month-day other-month"><div class="day-num-box"><span class="day-num">${i}</span></div></div>`;
     }
 
     html += `</div>`;
@@ -1652,7 +1840,6 @@ const App = {
     const events   = this.getFilteredEvents();
 
     let html = `<div class="week-grid-container">`;
-    // Header
     html += `<div class="week-header-row" style="grid-template-columns: 58px repeat(7, 1fr);">`;
     html += `<div class="week-header-col">เวลา</div>`;
     days.forEach(dd => {
@@ -1664,7 +1851,6 @@ const App = {
     });
     html += `</div>`;
 
-    // Timetable body
     html += `<div class="timeline-scroll">`;
     html += `<div class="timeline-labels">`;
     for (let h = 0; h < 24; h++) {
@@ -1707,7 +1893,6 @@ const App = {
       html += `</div>`;
     });
     html += `</div></div></div>`;
-
     wrap.innerHTML = html;
   },
 
@@ -1772,7 +1957,6 @@ const App = {
     if (!ev) return;
 
     const u = this.currentUser;
-    // สิทธิ์: staff แก้ไขเฉพาะงานตน, head แก้ไขงานในแผนก, admin แก้ไขได้หมด
     let canManage = false;
     if (u.role === 'admin') canManage = true;
     else if (u.role === 'head') {
@@ -1818,11 +2002,10 @@ const App = {
         <button class="btn btn-secondary btn-sm" style="flex:1" onclick="App.openEventModal(null, App.events.find(e=>e.id==='${id}'));this.closest('.detail-popup').remove()">✏️ แก้ไข</button>
         <button class="btn btn-danger btn-sm" style="flex:1" onclick="App.deleteEvent('${id}');this.closest('.detail-popup').remove()">🗑️ ลบ</button>
       </div>` : `
-      <div style="font-size:0.72rem;color:var(--text3);text-align:center;margin-top:8px">เฉพาะผู้รับผิดชอบหรือหัวหน้าจึงจะแก้ไข/ลบงานนี้ได้</div>`}
+      <div style="font-size:0.72rem;color:var(--text3);text-align:center;margin-top:8px">เฉพาะผู้รับผิดชอบหรือหัวหน้าแผนกจึงจะแก้ไข/ลบงานนี้ได้</div>`}
     `;
 
     document.body.appendChild(popup);
-
     setTimeout(() => {
       const clickHandler = (e) => {
         if (!popup.contains(e.target)) {
@@ -1834,43 +2017,57 @@ const App = {
     }, 100);
   },
 
+  // ---------- OPTIMISTIC UPDATE: CHANGE STATUS ----------
   async changeStatusInstant(id, status, btn) {
     const ev = this.events.find(e => e.id === id);
     if (!ev) return;
 
     const u = this.currentUser;
-    // สิทธิ์: staff เปลี่ยนเฉพาะงานตน
     if (u.role === 'staff' && ev.assignee !== u.email) {
       this.showToast('ไม่มีสิทธิ์เปลี่ยนสถานะงานของผู้อื่น', 'error');
       return;
     }
 
+    const previousStatus = ev.status;
+    const previousUpdatedAt = ev.updatedAt;
+
+    // Optimistic Update: แสดงผลทันที
     ev.status = status;
-    this._saveLocalState();
-
-    if (btn) {
-      const bar = btn.closest('.quick-status-bar');
-      bar.querySelectorAll('.status-pill-btn').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-    }
-
+    ev.updatedAt = getNowTimestamp();
     this.renderCalendar();
     this._checkNotifications();
     this.showToast(`เปลี่ยนสถานะเป็น "${this.getStatusLabel(status)}" แล้ว`, 'success');
 
-    // ซิงก์ Google Sheets
-    if (this.apiUrl) {
-      await this.api('updateStatus', { id, status });
+    // บันทึก Firestore
+    if (this.db && this.isFirebaseActive) {
+      try {
+        await this.db.collection('events').doc(id).update({
+          status: status,
+          updatedAt: ev.updatedAt,
+          updatedBy: u.email
+        });
+      } catch (err) {
+        // Rollback หากผิดพลาด
+        ev.status = previousStatus;
+        ev.updatedAt = previousUpdatedAt;
+        this.renderCalendar();
+        this.showToast('บันทึกลง Firestore ไม่สำเร็จ: ' + err.message, 'error');
+        return;
+      }
+    } else {
+      this._saveCache();
     }
+
+    // ซิงก์ลง Google Sheets เบื้องหลัง
+    this._syncToGoogleSheets('updateStatus', { id, status });
   },
 
-  // ---------- EVENT MODAL (ADD / EDIT) ----------
+  // ---------- EVENT MODAL & CONCURRENT DETECTION ----------
   openEventModal(dateStr, ev, timeStr = '') {
     const isEdit = !!ev;
     const u = this.currentUser;
 
     if (isEdit) {
-      // เช็คสิทธิ์
       let canManage = false;
       if (u.role === 'admin') canManage = true;
       else if (u.role === 'head') {
@@ -1883,6 +2080,12 @@ const App = {
         this.showToast('คุณไม่มีสิทธิ์แก้ไขงานนี้', 'error');
         return;
       }
+
+      this.currentlyEditingId = ev.id;
+      this.currentlyEditingTimestamp = ev.updatedAt;
+    } else {
+      this.currentlyEditingId = null;
+      this.currentlyEditingTimestamp = null;
     }
 
     const defaultStart = isEdit ? ev.start : (dateStr || this.toYMD(new Date()));
@@ -1900,12 +2103,15 @@ const App = {
       <div class="modal">
         <div class="modal-header">
           <div class="modal-title">${isEdit ? '✏️ แก้ไขงาน' : '➕ เพิ่มงานใหม่'}</div>
-          <button class="close-btn" onclick="document.getElementById('event-modal').remove()">✕</button>
+          <button class="close-btn" onclick="App.closeEventModal()">✕</button>
         </div>
         <div class="modal-body">
+          <!-- Concurrent alert banner -->
+          <div id="concurrent-warning-banner" class="concurrent-warning-banner" style="display:none"></div>
+
           <div class="form-group">
             <label class="form-label">ชื่องาน / รายการปฏิบัติงาน <span style="color:red">*</span></label>
-            <input class="form-control" id="ev-title" value="${isEdit ? ev.title : ''}" placeholder="ระบุชื่องานที่ต้องปฏิบัติ">
+            <input class="form-control" id="ev-title" value="${isEdit ? ev.title : ''}" placeholder="ระบุชื่องาน">
           </div>
           <div class="form-row">
             <div class="form-group">
@@ -1957,26 +2163,34 @@ const App = {
 
           <div class="form-group">
             <label class="form-label">สถานที่</label>
-            <input class="form-control" id="ev-location" value="${isEdit ? (ev.location || '') : ''}" placeholder="เช่น ห้องประชุม 1, ลานกิจกรรม">
+            <input class="form-control" id="ev-location" value="${isEdit ? (ev.location || '') : ''}" placeholder="เช่น ห้องประชุม 1, อาคาร 2">
           </div>
 
           <div class="form-group">
-            <label class="form-label">รายละเอียดเพิ่มเติม</label>
-            <textarea class="form-control" id="ev-detail" placeholder="วัตถุประสงค์ หรือบันทึกหมายเหตุ...">${isEdit ? (ev.detail || '') : ''}</textarea>
+            <label class="form-label">รายละเอียด</label>
+            <textarea class="form-control" id="ev-detail" placeholder="รายละเอียดวัตถุประสงค์งาน...">${isEdit ? (ev.detail || '') : ''}</textarea>
           </div>
         </div>
         <div class="modal-footer">
-          ${isEdit ? `<button class="btn btn-danger" onclick="App.deleteEvent('${ev.id}');document.getElementById('event-modal').remove()" style="margin-right:auto">🗑️ ลบงาน</button>` : ''}
-          <button class="btn btn-secondary" onclick="document.getElementById('event-modal').remove()">ยกเลิก</button>
+          ${isEdit ? `<button class="btn btn-danger" onclick="App.deleteEvent('${ev.id}');App.closeEventModal()" style="margin-right:auto">🗑️ ลบงาน</button>` : ''}
+          <button class="btn btn-secondary" onclick="App.closeEventModal()">ยกเลิก</button>
           <button class="btn btn-primary" onclick="App.saveEvent(${isEdit ? `'${ev.id}'` : 'null'})">💾 บันทึก</button>
         </div>
       </div>
     `;
 
     document.body.appendChild(modal);
-    modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+    modal.addEventListener('click', e => { if (e.target === modal) App.closeEventModal(); });
   },
 
+  closeEventModal() {
+    this.currentlyEditingId = null;
+    this.currentlyEditingTimestamp = null;
+    const modal = document.getElementById('event-modal');
+    if (modal) modal.remove();
+  },
+
+  // ---------- OPTIMISTIC UPDATE: SAVE EVENT ----------
   async saveEvent(editId) {
     const title     = document.getElementById('ev-title').value.trim();
     const type      = document.getElementById('ev-type').value;
@@ -1993,31 +2207,50 @@ const App = {
     if (!start) { this.showToast('กรุณาระบุวันเริ่มต้น', 'warning'); return; }
     if (end < start) { this.showToast('วันสิ้นสุดต้องไม่น้อยกว่าวันเริ่มต้น', 'warning'); return; }
 
+    const id = editId || genId();
+    const nowStamp = getNowTimestamp();
+    const targetUser = this.users.find(u => u.email === assignee);
+    const department = targetUser ? (targetUser.department || '') : '';
+
     const eventData = {
-      id: editId || genId(),
-      title, type, status, assignee, start, end, startTime, endTime, location, detail
+      id, title, type, status, assignee, start, end, startTime, endTime, location, detail,
+      department: department,
+      updatedAt: nowStamp,
+      updatedBy: this.currentUser ? this.currentUser.email : ''
     };
 
-    if (editId) {
-      const idx = this.events.findIndex(e => e.id === editId);
-      if (idx !== -1) this.events[idx] = eventData;
-      this.showToast('แก้ไขข้อมูลงานเรียบร้อยแล้ว', 'success');
+    // Optimistic Update: อัปเดต UI ทันที
+    const oldEventsBackup = [...this.events];
+    const idx = this.events.findIndex(e => e.id === id);
+    if (idx !== -1) {
+      this.events[idx] = eventData;
+      this.showToast('แก้ไขงานสำเร็จ', 'success');
     } else {
       this.events.push(eventData);
-      this.showToast('เพิ่มงานใหม่เรียบร้อยแล้ว', 'success');
+      this.showToast('เพิ่มงานใหม่สำเร็จ', 'success');
     }
 
-    this._saveLocalState();
-    const modal = document.getElementById('event-modal');
-    if (modal) modal.remove();
-
+    this.closeEventModal();
     this.renderCalendar();
     this._checkNotifications();
 
-    // ซิงก์ Google Apps Script API
-    if (this.apiUrl) {
-      await this.api(editId ? 'updateEvent' : 'createEvent', eventData);
+    // บันทึกลง Firestore
+    if (this.db && this.isFirebaseActive) {
+      try {
+        await this.db.collection('events').doc(id).set(eventData, { merge: true });
+      } catch (err) {
+        // Rollback เมื่อบันทึกล้มเหลว
+        this.events = oldEventsBackup;
+        this.renderCalendar();
+        this.showToast('บันทึกล้มเหลว (Rollback): ' + err.message, 'error');
+        return;
+      }
+    } else {
+      this._saveCache();
     }
+
+    // ซิงก์ลง Google Sheets (Apps Script Web App)
+    this._syncToGoogleSheets('upsertEvent', eventData);
   },
 
   async deleteEvent(id) {
@@ -2025,14 +2258,109 @@ const App = {
     if (!ev) return;
     if (!confirm(`คุณต้องการลบงาน "${ev.title}" ใช่หรือไม่?`)) return;
 
+    const oldEventsBackup = [...this.events];
     this.events = this.events.filter(e => e.id !== id);
-    this._saveLocalState();
     this.renderCalendar();
     this._checkNotifications();
     this.showToast('ลบงานเรียบร้อยแล้ว', 'success');
 
-    if (this.apiUrl) {
-      await this.api('deleteEvent', { id });
+    if (this.db && this.isFirebaseActive) {
+      try {
+        await this.db.collection('events').doc(id).delete();
+      } catch (err) {
+        this.events = oldEventsBackup;
+        this.renderCalendar();
+        this.showToast('ลบงานไม่สำเร็จ: ' + err.message, 'error');
+        return;
+      }
+    } else {
+      this._saveCache();
+    }
+
+    this._syncToGoogleSheets('deleteEvent', { id });
+  },
+
+  // ---------- GOOGLE SHEETS BIDIRECTIONAL SYNC ----------
+  async _syncToGoogleSheets(action, payload) {
+    if (!this.sheetsApiUrl) return;
+    try {
+      await fetch(this.sheetsApiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({
+          action: action,
+          userEmail: this.currentUser ? this.currentUser.email : '',
+          ...payload
+        })
+      });
+    } catch (err) {
+      console.warn('Sync to Google Sheets failed:', err);
+    }
+  },
+
+  // นำเข้าข้อมูลจาก Google Sheets สู่ Firestore (Admin Only)
+  async importFromGoogleSheets() {
+    if (!this.sheetsApiUrl) {
+      this.showToast('กรุณาตั้งค่า Google Apps Script Web App URL ก่อน', 'warning');
+      this.openConfigModal();
+      return;
+    }
+    if (this.currentUser.role !== 'admin') {
+      this.showToast('เฉพาะผู้ดูแลระบบ (Admin) เท่านั้นที่นำเข้าข้อมูลได้', 'error');
+      return;
+    }
+
+    if (!confirm('ต้องการดึงข้อมูลงานทั้งหมดจาก Google Sheets เพื่ออัปเดตลงใน Firestore หรือไม่?')) return;
+
+    this.showLoading(true, 'กำลังอ่านข้อมูลจาก Google Sheets...');
+    try {
+      const resp = await fetch(this.sheetsApiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ action: 'getEvents' })
+      });
+      const res = await resp.json();
+
+      if (!res.success || !res.data) {
+        throw new Error(res.error || 'ไม่สามารถดึงข้อมูลได้');
+      }
+
+      const sheetEvents = res.data;
+      if (sheetEvents.length === 0) {
+        this.showToast('ไม่พบข้อมูลงานใน Google Sheets', 'info');
+        return;
+      }
+
+      this.showLoading(true, `กำลังนำเข้า ${sheetEvents.length} รายการสู่ Firestore...`);
+
+      if (this.db && this.isFirebaseActive) {
+        const batch = this.db.batch();
+        sheetEvents.forEach(item => {
+          if (item.id) {
+            const ref = this.db.collection('events').doc(item.id);
+            batch.set(ref, {
+              ...item,
+              updatedAt: item.updatedAt || getNowTimestamp()
+            }, { merge: true });
+          }
+        });
+        await batch.commit();
+      } else {
+        // ออฟไลน์โหมด
+        sheetEvents.forEach(item => {
+          const idx = this.events.findIndex(e => e.id === item.id);
+          if (idx !== -1) this.events[idx] = item;
+          else this.events.push(item);
+        });
+        this._saveCache();
+        this.renderCalendar();
+      }
+
+      this.showToast(`นำเข้าสำเร็จ ${sheetEvents.length} รายการจาก Google Sheets เรียบร้อยแล้ว!`, 'success');
+    } catch (err) {
+      this.showToast('นำเข้าข้อมูลล้มเหลว: ' + err.message, 'error');
+    } finally {
+      this.showLoading(false);
     }
   },
 
@@ -2112,7 +2440,6 @@ const App = {
     const done    = events.filter(e => e.status === 'done').length;
     const overdue = events.filter(e => e.status !== 'done' && (e.end || e.start) < today).length;
 
-    // Per-user summary
     const userRows = this.users.map(u => {
       const ue = events.filter(e => e.assignee === u.email);
       return {
@@ -2124,7 +2451,6 @@ const App = {
       };
     });
 
-    // Upcoming (7 days)
     const upcoming = events.filter(e => {
       const end = e.end || e.start;
       return e.status !== 'done' && end >= today && end <= d7Str;
@@ -2138,6 +2464,7 @@ const App = {
           <p style="font-size:0.85rem;color:var(--text2)">สรุปภาพรวมและสถิติงานตามสถานะและผู้รับผิดชอบ</p>
         </div>
         <div style="display:flex;gap:8px">
+          ${this.currentUser.role === 'admin' ? `<button class="btn btn-secondary btn-sm" onclick="App.importFromGoogleSheets()">📥 นำเข้าจากชีต</button>` : ''}
           <button class="btn btn-secondary btn-sm" onclick="App.exportExcel()">📥 ส่งออก Excel (CSV)</button>
           <button class="btn btn-primary btn-sm" onclick="App.exportPDF()">🖨️ ส่งออก PDF / พิมพ์</button>
         </div>
@@ -2212,7 +2539,7 @@ const App = {
 
   exportExcel() {
     const rows = [
-      ['ID', 'ชื่องาน', 'ประเภท', 'สถานะ', 'อีเมลผู้รับผิดชอบ', 'ชื่อผู้รับผิดชอบ', 'วันเริ่มต้น', 'วันสิ้นสุด', 'เวลาเริ่ม', 'เวลาสิ้นสุด', 'สถานที่', 'รายละเอียด']
+      ['ID', 'ชื่องาน', 'ประเภท', 'สถานะ', 'อีเมลผู้รับผิดชอบ', 'ชื่อผู้รับผิดชอบ', 'วันเริ่มต้น', 'วันสิ้นสุด', 'เวลาเริ่ม', 'เวลาสิ้นสุด', 'สถานที่', 'รายละเอียด', 'อัปเดตล่าสุด']
     ];
 
     this.events.forEach(ev => {
@@ -2228,11 +2555,11 @@ const App = {
         ev.startTime || '',
         ev.endTime || '',
         ev.location || '',
-        ev.detail || ''
+        ev.detail || '',
+        ev.updatedAt || ''
       ]);
     });
 
-    // ใส่ UTF-8 BOM สำหรับเปิดใน Excel ให้ภาษาไทยไม่เพี้ยน
     const csvContent = rows.map(r => r.map(c => `"${String(c || '').replace(/"/g, '""')}"`).join(',')).join('\r\n');
     const bom = '\uFEFF';
     const blob = new Blob([bom + csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -2242,14 +2569,14 @@ const App = {
     a.download = `ปฏิทินการปฏิบัติงาน_${this.toYMD(new Date())}.csv`;
     a.click();
     URL.revokeObjectURL(url);
-    this.showToast('ส่งออกไฟล์ Excel (CSV) เรียบร้อยแล้ว', 'success');
+    this.showToast('ส่งออกไฟล์ Excel (CSV) สำเร็จ', 'success');
   },
 
   exportPDF() {
     window.print();
   },
 
-  // ---------- USER MANAGEMENT (ADMIN) ----------
+  // ---------- USERS & HOLIDAYS MANAGEMENT ----------
   renderUsers() {
     if (this.currentUser.role !== 'admin') {
       document.getElementById('page-users').innerHTML = '<div style="padding:20px;color:var(--text2)">คุณไม่มีสิทธิ์เข้าถึงส่วนนี้ (เฉพาะ Admin)</div>';
@@ -2261,7 +2588,7 @@ const App = {
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px">
         <div>
           <h2 style="font-size:1.2rem;font-weight:800;color:var(--text)">👥 จัดการรายชื่อผู้ใช้</h2>
-          <p style="font-size:0.85rem;color:var(--text2)">เพิ่ม ลบ แก้ไข ผู้ใช้งานและกำหนดสิทธิ์ (Admin / Head / Staff)</p>
+          <p style="font-size:0.85rem;color:var(--text2)">กำหนดสิทธิ์ Admin / Head / Staff</p>
         </div>
         <button class="btn btn-primary btn-sm" onclick="App.openUserModal(null)">➕ เพิ่มผู้ใช้</button>
       </div>
@@ -2317,7 +2644,7 @@ const App = {
           <div class="form-row">
             <div class="form-group">
               <label class="form-label">แผนก / ฝ่าย</label>
-              <input class="form-control" id="u-dept" value="${isEdit ? (user.department || '') : ''}" placeholder="เช่น IT, HR, วิชาการ">
+              <input class="form-control" id="u-dept" value="${isEdit ? (user.department || '') : ''}" placeholder="เช่น IT, HR">
             </div>
             <div class="form-group">
               <label class="form-label">ระดับสิทธิ์ (Role)</label>
@@ -2339,7 +2666,7 @@ const App = {
   },
 
   async saveUser(editEmail) {
-    const email = document.getElementById('u-email').value.trim();
+    const email = document.getElementById('u-email').value.trim().toLowerCase();
     const name  = document.getElementById('u-name').value.trim();
     const dept  = document.getElementById('u-dept').value.trim();
     const role  = document.getElementById('u-role').value;
@@ -2349,27 +2676,25 @@ const App = {
 
     const userData = { email, name, department: dept, role };
 
-    if (editEmail) {
-      const idx = this.users.findIndex(u => u.email === editEmail);
-      if (idx !== -1) this.users[idx] = userData;
-      this.showToast('แก้ไขข้อมูลผู้ใช้เรียบร้อยแล้ว', 'success');
-    } else {
-      if (this.users.find(u => u.email.toLowerCase() === email.toLowerCase())) {
-        this.showToast('อีเมลนี้มีอยู่ในระบบแล้ว', 'error');
+    if (this.db && this.isFirebaseActive) {
+      try {
+        await this.db.collection('users').doc(email).set(userData, { merge: true });
+        this.showToast('บันทึกข้อมูลผู้ใช้เรียบร้อยแล้ว', 'success');
+      } catch (err) {
+        this.showToast('บันทึกผู้ใช้ไม่สำเร็จ: ' + err.message, 'error');
         return;
       }
-      this.users.push(userData);
-      this.showToast('เพิ่มผู้ใช้ใหม่เรียบร้อยแล้ว', 'success');
+    } else {
+      const idx = this.users.findIndex(u => u.email === email);
+      if (idx !== -1) this.users[idx] = userData;
+      else this.users.push(userData);
+      this._saveCache();
+      this.renderUsers();
+      this.showToast('บันทึกข้อมูลผู้ใช้เรียบร้อยแล้ว', 'success');
     }
 
-    this._saveLocalState();
     document.getElementById('user-modal').remove();
-    this.renderUsers();
-    this._fillAssigneeFilter();
-
-    if (this.apiUrl) {
-      await this.api(editEmail ? 'updateUser' : 'createUser', userData);
-    }
+    this._syncToGoogleSheets(editEmail ? 'updateUser' : 'createUser', userData);
   },
 
   async deleteUser(email) {
@@ -2377,20 +2702,26 @@ const App = {
       this.showToast('ไม่สามารถลบบัญชีของตนเองที่กำลังใช้งานอยู่ได้', 'error');
       return;
     }
-    if (!confirm(`คุณต้องการลบผู้ใช้ ${email} ใช่หรือไม่?`)) return;
+    if (!confirm(`ต้องการลบผู้ใช้ ${email} ใช่หรือไม่?`)) return;
 
-    this.users = this.users.filter(u => u.email !== email);
-    this._saveLocalState();
-    this.renderUsers();
-    this._fillAssigneeFilter();
-    this.showToast('ลบผู้ใช้เรียบร้อยแล้ว', 'success');
-
-    if (this.apiUrl) {
-      await this.api('deleteUser', { email });
+    if (this.db && this.isFirebaseActive) {
+      try {
+        await this.db.collection('users').doc(email).delete();
+        this.showToast('ลบผู้ใช้เรียบร้อยแล้ว', 'success');
+      } catch (err) {
+        this.showToast('ลบผู้ใช้ไม่สำเร็จ: ' + err.message, 'error');
+        return;
+      }
+    } else {
+      this.users = this.users.filter(u => u.email !== email);
+      this._saveCache();
+      this.renderUsers();
+      this.showToast('ลบผู้ใช้เรียบร้อยแล้ว', 'success');
     }
+
+    this._syncToGoogleSheets('deleteUser', { email });
   },
 
-  // ---------- HOLIDAY MANAGEMENT (ADMIN) ----------
   renderHolidays() {
     if (this.currentUser.role !== 'admin') {
       document.getElementById('page-holidays').innerHTML = '<div style="padding:20px;color:var(--text2)">คุณไม่มีสิทธิ์เข้าถึงส่วนนี้ (เฉพาะ Admin)</div>';
@@ -2402,10 +2733,10 @@ const App = {
     wrap.innerHTML = `
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px">
         <div>
-          <h2 style="font-size:1.2rem;font-weight:800;color:var(--text)">🎌 จัดการวันหยุดนักขัตฤกษ์และวันหยุดสถาบัน</h2>
-          <p style="font-size:0.85rem;color:var(--text2)">กำหนดวันหยุดที่จะแสดงและไฮไลต์บนปฏิทิน</p>
+          <h2 style="font-size:1.2rem;font-weight:800;color:var(--text)">🎌 จัดการวันหยุดนักขัตฤกษ์</h2>
+          <p style="font-size:0.85rem;color:var(--text2)">วันหยุดจะถูกไฮไลต์บนปฏิทินของทุกเครื่อง</p>
         </div>
-        <button class="btn btn-primary btn-sm" onclick="App.openHolidayModal(null)">➕ เพิ่มวันหยุด</button>
+        <button class="btn btn-primary btn-sm" onclick="App.openHolidayModal()">➕ เพิ่มวันหยุด</button>
       </div>
 
       <div class="dash-section" style="padding:0;overflow:hidden">
@@ -2450,7 +2781,7 @@ const App = {
           </div>
           <div class="form-group">
             <label class="form-label">ชื่อวันหยุด <span style="color:red">*</span></label>
-            <input class="form-control" id="h-name" placeholder="เช่น วันสถาปนาโรงเรียน">
+            <input class="form-control" id="h-name" placeholder="เช่น วันสถาปนาสถาบัน">
           </div>
           <div class="form-group">
             <label class="form-label">ประเภทวันหยุด</label>
@@ -2478,117 +2809,133 @@ const App = {
     if (!name) { this.showToast('กรุณาระบุชื่อวันหยุด', 'warning'); return; }
 
     const holidayData = { date, name, type };
-    const existing = this.holidays.find(h => h.date === date);
-    if (existing) {
-      existing.name = name;
-      existing.type = type;
+
+    if (this.db && this.isFirebaseActive) {
+      try {
+        await this.db.collection('holidays').doc(date).set(holidayData);
+        this.showToast('บันทึกวันหยุดเรียบร้อยแล้ว', 'success');
+      } catch (err) {
+        this.showToast('บันทึกวันหยุดไม่สำเร็จ: ' + err.message, 'error');
+        return;
+      }
     } else {
-      this.holidays.push(holidayData);
+      const existing = this.holidays.find(h => h.date === date);
+      if (existing) { existing.name = name; existing.type = type; }
+      else { this.holidays.push(holidayData); }
+      this._saveCache();
+      this.renderHolidays();
+      this.renderCalendar();
+      this.showToast('บันทึกวันหยุดเรียบร้อยแล้ว', 'success');
     }
 
-    this._saveLocalState();
     document.getElementById('hol-modal').remove();
-    this.renderHolidays();
-    this.renderCalendar();
-    this.showToast('บันทึกวันหยุดเรียบร้อยแล้ว', 'success');
-
-    if (this.apiUrl) {
-      await this.api('createHoliday', holidayData);
-    }
+    this._syncToGoogleSheets('createHoliday', holidayData);
   },
 
   async deleteHoliday(date) {
     if (!confirm('คุณต้องการลบวันหยุดนี้ใช่หรือไม่?')) return;
-    this.holidays = this.holidays.filter(h => h.date !== date);
-    this._saveLocalState();
-    this.renderHolidays();
-    this.renderCalendar();
-    this.showToast('ลบวันหยุดเรียบร้อยแล้ว', 'success');
 
-    if (this.apiUrl) {
-      await this.api('deleteHoliday', { date });
+    if (this.db && this.isFirebaseActive) {
+      try {
+        await this.db.collection('holidays').doc(date).delete();
+        this.showToast('ลบวันหยุดเรียบร้อยแล้ว', 'success');
+      } catch (err) {
+        this.showToast('ลบไม่สำเร็จ: ' + err.message, 'error');
+        return;
+      }
+    } else {
+      this.holidays = this.holidays.filter(h => h.date !== date);
+      this._saveCache();
+      this.renderHolidays();
+      this.renderCalendar();
+      this.showToast('ลบวันหยุดเรียบร้อยแล้ว', 'success');
     }
+
+    this._syncToGoogleSheets('deleteHoliday', { date });
   },
 
-  // ---------- API CONFIG MODAL ----------
+  // ---------- CONFIG MODAL (FIREBASE & SHEETS) ----------
   openConfigModal() {
+    const fbVal = this.firebaseConfig ? JSON.stringify(this.firebaseConfig, null, 2) : '';
     const modal = document.createElement('div');
     modal.className = 'modal-overlay';
     modal.id = 'config-modal';
     modal.innerHTML = `
-      <div class="modal" style="max-width:480px">
+      <div class="modal" style="max-width:540px">
         <div class="modal-header">
-          <div class="modal-title">⚙️ ตั้งค่าการเชื่อมต่อ Google API</div>
+          <div class="modal-title">⚙️ ตั้งค่าการเชื่อมต่อ Real-time & Google Sheets</div>
           <button class="close-btn" onclick="document.getElementById('config-modal').remove()">✕</button>
         </div>
         <div class="modal-body">
           <div class="form-group">
-            <label class="form-label">Google Apps Script Web App URL</label>
-            <input class="form-control" id="cfg-api-url" value="${this.apiUrl}" placeholder="https://script.google.com/macros/s/.../exec">
-            <small style="color:var(--text2);display:block;margin-top:6px">
-              นำ URL ที่ได้จากการ Deploy Web App มาวางที่นี่ หรือปล่อยว่างไว้เพื่อใช้งานใน <strong>Demo Mode</strong>
+            <label class="form-label">Firebase Config JSON Object <span style="color:var(--primary)">*สำหรับ Real-time</span></label>
+            <textarea class="form-control" id="cfg-firebase" style="font-family:monospace;font-size:0.8rem;min-height:120px" placeholder='{\n  "apiKey": "AIzaSy...",\n  "authDomain": "your-project.firebaseapp.com",\n  "projectId": "your-project-id",\n  "storageBucket": "...",\n  "messagingSenderId": "...",\n  "appId": "..."\n}'>${fbVal}</textarea>
+            <small style="color:var(--text3);display:block;margin-top:4px">
+              คัดลอกจาก Firebase Console → Project Settings → Web App Config
             </small>
           </div>
 
-          <div style="background:var(--surface2);padding:12px;border-radius:8px;font-size:0.82rem;line-height:1.4;margin-top:12px">
-            <strong>วิธีตั้งค่า Google Apps Script:</strong>
-            <ol style="margin-left:18px;margin-top:4px">
-              <li>สร้าง Spreadsheet → Extensions → Apps Script</li>
-              <li>คัดลอกโค้ดจาก <code>Code.gs</code> ไปวาง</li>
-              <li>กด Deploy → New deployment → Web app</li>
-              <li>Who has access: <strong>Anyone</strong></li>
-              <li>คัดลอก URL มาวางในช่องด้านบน</li>
-            </ol>
+          <div class="form-group" style="margin-top:14px">
+            <label class="form-label">Google Apps Script Web App URL <span style="color:var(--text3)">(สำหรับซิงก์ Google Sheets)</span></label>
+            <input class="form-control" id="cfg-sheets-url" value="${this.sheetsApiUrl}" placeholder="https://script.google.com/macros/s/.../exec">
+            <small style="color:var(--text3);display:block;margin-top:4px">
+              นำ URL ที่ได้จาก Deploy Apps Script มาวางที่นี่ เพื่อซิงก์ข้อมูลลง Google Sheets อัตโนมัติ
+            </small>
+          </div>
+
+          <div style="background:var(--surface2);padding:10px 14px;border-radius:8px;font-size:0.8rem;line-height:1.4">
+            💡 <strong>คำแนะนำ:</strong> หากยังไม่ได้ผูก Firebase ระบบจะทำงานใน Demo Mode บนหน่วยความจำเบราว์เซอร์
           </div>
         </div>
         <div class="modal-footer">
-          <button class="btn btn-secondary" onclick="App.testApiConnection()">🔍 ทดสอบเชื่อมต่อ</button>
-          <button class="btn btn-primary" onclick="App.saveApiConfig()">💾 บันทึกการตั้งค่า</button>
+          <button class="btn btn-secondary" onclick="App.clearConfig()">ล้างค่าทั้งหมด</button>
+          <button class="btn btn-primary" onclick="App.saveConfig()">💾 บันทึกการตั้งค่า</button>
         </div>
       </div>
     `;
     document.body.appendChild(modal);
   },
 
-  async testApiConnection() {
-    const url = document.getElementById('cfg-api-url').value.trim();
-    if (!url) {
-      this.showToast('กรุณากรอก URL ก่อนทดสอบ', 'warning');
-      return;
-    }
-    this.showLoading(true, 'กำลังทดสอบเชื่อมต่อ Google Apps Script...');
-    try {
-      const resp = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify({ action: 'ping' })
-      });
-      const data = await resp.json();
-      if (data.success) {
-        this.showToast('เชื่อมต่อสำเร็จ! API พร้อมใช้งาน', 'success');
-      } else {
-        this.showToast('ตอบกลับจาก API แต่มีข้อผิดพลาด: ' + (data.error || 'unknown'), 'warning');
+  saveConfig() {
+    const fbText = document.getElementById('cfg-firebase').value.trim();
+    const sheetsUrl = document.getElementById('cfg-sheets-url').value.trim();
+
+    if (fbText) {
+      try {
+        const parsed = JSON.parse(fbText);
+        this.firebaseConfig = parsed;
+        localStorage.setItem('app_firebase_config', JSON.stringify(parsed));
+      } catch (e) {
+        this.showToast('รูปแบบ Firebase JSON ไม่ถูกต้อง: ' + e.message, 'error');
+        return;
       }
-    } catch (e) {
-      this.showToast('ไม่สามารถเชื่อมต่อได้: ' + e.message, 'error');
-    } finally {
-      this.showLoading(false);
+    } else {
+      this.firebaseConfig = null;
+      localStorage.removeItem('app_firebase_config');
     }
+
+    this.sheetsApiUrl = sheetsUrl;
+    localStorage.setItem('gas_api_url', sheetsUrl);
+
+    document.getElementById('config-modal').remove();
+    this.showToast('บันทึกการตั้งค่าเรียบร้อยแล้ว กำลังเริ่มต้นระบบใหม่...', 'success');
+
+    // Re-init
+    setTimeout(() => {
+      this.initFirebase();
+      if (this.currentUser) this._startRealtimeListeners();
+    }, 500);
   },
 
-  async saveApiConfig() {
-    const url = document.getElementById('cfg-api-url').value.trim();
-    this.apiUrl = url;
-    localStorage.setItem('gas_api_url', url);
-    this._updateApiStatusBadge();
+  clearConfig() {
+    if (!confirm('ต้องการล้างการตั้งค่า Firebase และ Google Sheets หรือไม่?')) return;
+    localStorage.removeItem('app_firebase_config');
+    localStorage.removeItem('gas_api_url');
+    this.firebaseConfig = null;
+    this.sheetsApiUrl = '';
     document.getElementById('config-modal').remove();
-
-    if (url) {
-      this.showToast('บันทึก Web App URL เรียบร้อยแล้ว กำลังซิงก์ข้อมูล...', 'success');
-      await this.refreshAllData();
-    } else {
-      this.showToast('เปลี่ยนเป็นโหมด Demo Mode (Offline) แล้ว', 'info');
-    }
+    this.initFirebase();
+    this.showToast('ล้างการตั้งค่าและกลับสู่โหมด Demo แล้ว', 'info');
   },
 
   // ---------- UI UTILITIES ----------
@@ -2605,7 +2952,7 @@ const App = {
       toast.style.transform = 'translateY(10px)';
       toast.style.transition = 'all 0.3s';
       setTimeout(() => toast.remove(), 300);
-    }, 3500);
+    }, 3800);
   },
 
   showLoading(show, text = 'กำลังโหลดข้อมูล...') {
@@ -2616,7 +2963,6 @@ const App = {
   }
 };
 
-// เริ่มต้นระบบเมื่อโหลดหน้าเสร็จ
 document.addEventListener('DOMContentLoaded', () => App.init());
 </script>
 </body>
